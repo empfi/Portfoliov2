@@ -43,7 +43,7 @@ function createPixelTexture(type: 'top' | 'bottom' | 'side') {
 
 export function MinecraftBlock() {
   const { focusedItem, setFocusedItem } = useFocus();
-  const isHeld = focusedItem === 'block';
+  const isHeld = focusedItem === 'hyperplex';
 
   const rotQ = useRef(new THREE.Quaternion());
   const lastPointer = useRef({ x: 0, y: 0 });
@@ -91,7 +91,7 @@ export function MinecraftBlock() {
   const handleClick = (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation();
     if (!isDragging.current) {
-      setFocusedItem(isHeld ? null : 'block');
+      setFocusedItem(isHeld ? null : 'hyperplex');
     }
   };
 

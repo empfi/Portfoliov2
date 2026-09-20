@@ -17,8 +17,6 @@ export function NeutrabotsToy() {
   const angularVelocity = useRef({ x: 0, y: 0 });
   const [hovered, setHovered] = React.useState(false);
   
-  const ringRef = useRef<THREE.Mesh>(null);
-
   useCursor(hovered, isHeld ? 'grab' : 'pointer', 'auto');
 
   const [{ pos, scale, rot }, api] = useSpring(() => ({
@@ -42,10 +40,6 @@ export function NeutrabotsToy() {
   }, [isHeld, api]);
 
   useFrame((state, delta) => {
-    if (ringRef.current) {
-      ringRef.current.rotation.z += delta * 2;
-    }
-
     if (isHeld && !isPointerDown.current) {
       if (Math.abs(angularVelocity.current.x) > 0.0001 || Math.abs(angularVelocity.current.y) > 0.0001) {
         const deltaQ = new THREE.Quaternion().setFromEuler(new THREE.Euler(angularVelocity.current.x, angularVelocity.current.y, 0, 'XYZ'));
@@ -155,12 +149,7 @@ export function NeutrabotsToy() {
             <meshStandardMaterial color="#ff0055" emissive="#ff0055" emissiveIntensity={2} />
           </mesh>
 
-          {/* Hover Ring (Energy Field) */}
-          <mesh position={[0, -0.3, 0]} rotation={[Math.PI / 2, 0, 0]} ref={ringRef}>
-            <torusGeometry args={[0.2, 0.01, 8, 32]} />
-            <meshStandardMaterial color="#00aaff" emissive="#00aaff" emissiveIntensity={1.5} />
-          </mesh>
-          
+
           {/* Hover Thruster (Bottom) */}
           <mesh position={[0, -0.23, 0]} rotation={[Math.PI, 0, 0]}>
             <cylinderGeometry args={[0.05, 0.1, 0.04, 16]} />

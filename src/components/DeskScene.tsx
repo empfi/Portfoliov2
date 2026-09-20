@@ -5,6 +5,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { ContactShadows, PerspectiveCamera, useTexture } from '@react-three/drei';
 import { useSpring, animated } from '@react-spring/three';
 import { FocusProvider, useFocus } from '@/context/FocusContext';
+import RouteSync from './RouteSync';
 import { TexturedDesk } from './models/TexturedDesk';
 import { MinecraftBlock } from './models/MinecraftBlock';
 import { AnimatedBook } from './models/AnimatedBook';
@@ -28,8 +29,6 @@ function BackgroundClicker() {
   const { focusedItem, setFocusedItem } = useFocus();
   return (
     <mesh 
-      position={[0, 0.001, 0]} 
-      rotation={[-Math.PI / 2, 0, 0]} 
       onPointerDown={(e) => {
         if (focusedItem) {
           e.stopPropagation();
@@ -37,8 +36,8 @@ function BackgroundClicker() {
         }
       }}
     >
-      <planeGeometry args={[100, 100]} />
-      <meshBasicMaterial transparent={true} opacity={0} depthWrite={false} />
+      <sphereGeometry args={[50, 16, 16]} />
+      <meshBasicMaterial transparent={true} opacity={0} side={THREE.BackSide} depthWrite={false} />
     </mesh>
   );
 }
@@ -77,7 +76,7 @@ function CameraRig() {
   const { camera, viewport } = useThree();
 
   const isPolaroid = focusedItem?.startsWith('polaroid') || false;
-  const shouldSwoop = focusedItem === 'block' || focusedItem === 'luakey' || focusedItem === 'minedock' || focusedItem === 'bloxvault' || focusedItem === 'neutrabots' || isPolaroid;
+  const shouldSwoop = focusedItem === 'hyperplex' || focusedItem === 'luakey' || focusedItem === 'minedock' || focusedItem === 'bloxvault' || focusedItem === 'neutrabots' || focusedItem === 'mysterybox' || isPolaroid;
 
   const parallaxOffset = useRef({ x: 0, z: 0 });
   const baseFov = viewport.aspect < 1.0 ? 55 : 35;
@@ -156,6 +155,7 @@ export default function DeskScene() {
       touchAction: 'none',
     }}>
       <FocusProvider>
+        <RouteSync />
         <Canvas shadows>
           <fog attach="fog" args={['#1a1209', 15, 30]} />
           <BackgroundClicker />
@@ -253,7 +253,7 @@ function ProjectOverlay() {
   const { focusedItem } = useFocus();
   
   const projectData: Record<string, { title: string; desc: string; tags: string[]; link: string; buttonText?: string }> = {
-    block: {
+    hyperplex: {
       title: "hyperplex.de",
       desc: "A custom Minecraft server network. Features custom-coded gamemodes like SMP and Practice, built to support a large community with high-performance plugins and infrastructure.",
       tags: ["Java", "React", "JavaScript", "CSS", "HTML"],
