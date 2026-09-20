@@ -214,7 +214,7 @@ export function GuestBook() {
           <Turnstile
             siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY}
             onSuccess={setTurnstileToken}
-            options={{ size: 'invisible', action: 'submit_guestbook' }}
+            options={{ appearance: 'interaction-only', action: 'submit_guestbook' }}
           />
         </div>,
         document.body
