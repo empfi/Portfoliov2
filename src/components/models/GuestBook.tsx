@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useSpring, animated } from '@react-spring/three';
 import { RoundedBox, Text, Html } from '@react-three/drei';
 import { useFocus } from '@/context/FocusContext';
+import { Turnstile } from '@marsidev/react-turnstile';
 
 const FONT = '/fonts/caveat.woff';
 const MAX_CHARS = 250;
@@ -18,6 +19,7 @@ export function GuestBook() {
   const [entries, setEntries]         = useState<any[]>([]);
   const [spread, setSpread]           = useState(0);
   const [selectedAll, setSelectedAll] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
 
   // Layout synchronization states
   const [inputLines, setInputLines]   = useState(1);
@@ -99,14 +101,14 @@ export function GuestBook() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [isOpen, typed, selectedAll]);
+  }, [isOpen, typed, selectedAll, turnstileToken]);
 
   const submitText = async (text: string) => {
     if (!text.trim() || loading) return;
     setLoading(true);
     await fetch('/api/guestbook', {
       method: 'POST',
-      body: JSON.stringify({ name: 'Anonymous', message: text.trim() }),
+      body: JSON.stringify({ name: 'Anonymous', message: text.trim(), token: turnstileToken }),
       headers: { 'Content-Type': 'application/json' }
     });
     setTyped('');
@@ -206,6 +208,18 @@ export function GuestBook() {
       position={bookPos as any} rotation={bookRot as any} scale={bookScale as any}
       onPointerDown={stopProp} onPointerUp={stopProp} onPointerMove={stopProp} onDoubleClick={stopProp}
     >
+      {isOpen && process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY && process.env.NODE_ENV === 'production' && (
+        <Html transform={false} position={[0, 0, 0]}>
+          <div style={{ position: 'absolute', top: '-9999px', left: '-9999px' }}>
+            <Turnstile 
+              siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY} 
+              onSuccess={setTurnstileToken} 
+              options={{ action: 'submit_guestbook' }}
+            />
+          </div>
+        </Html>
+      )}
+
       {/* ── geometry ── */}
       <RoundedBox args={[2.7, 0.04, 3.5]} position={[0, -0.02, 0]} radius={0.02} smoothness={4}
         castShadow receiveShadow onClick={onClickBook} onPointerOver={over} onPointerOut={out}>

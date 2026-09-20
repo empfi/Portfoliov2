@@ -1,0 +1,7 @@
+name = "portfolio"
+compatibility_date = "2024-09-20"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "portfolio-guestbook"
+database_id = "e6af85e5-2599-4d13-be50-3bd628177382"
