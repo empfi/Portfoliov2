@@ -27,10 +27,10 @@ async function getDB() {
   return null;
 }
 
-async function verifyTurnstile(token: string) {
-  if (process.env.NODE_ENV !== 'production') return true;
+async function verifyTurnstile(token: string | null) {
   const secret = process.env.TURNSTILE_SECRET;
-  if (!secret) return true; // Bypass if not configured yet
+  // Bypass if no secret configured or no token (widget not yet loaded)
+  if (!secret || !token) return true;
   
   const formData = new FormData();
   formData.append('secret', secret);

@@ -208,7 +208,7 @@ export function GuestBook() {
       position={bookPos as any} rotation={bookRot as any} scale={bookScale as any}
       onPointerDown={stopProp} onPointerUp={stopProp} onPointerMove={stopProp} onDoubleClick={stopProp}
     >
-      {isOpen && process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY && process.env.NODE_ENV === 'production' && (
+      {isOpen && process.env.NODE_ENV === 'production' && process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY && (
         <Html transform={false} position={[0, 0, 0]}>
           <div style={{ position: 'absolute', top: '-9999px', left: '-9999px' }}>
             <Turnstile 
