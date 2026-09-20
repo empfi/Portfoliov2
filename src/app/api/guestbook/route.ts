@@ -28,8 +28,17 @@ async function getDB() {
 }
 
 async function verifyTurnstile(token: string | null) {
-  const secret = process.env.TURNSTILE_SECRET;
-  // No secret configured → Turnstile not set up yet, bypass
+  // Get the secret from Cloudflare Worker env (not process.env)
+  let secret: string | undefined;
+  try {
+    const { getCloudflareContext } = await import('@opennextjs/cloudflare');
+    const ctx = await getCloudflareContext({ async: true });
+    secret = (ctx?.env as any)?.TURNSTILE_SECRET;
+  } catch {
+    secret = process.env.TURNSTILE_SECRET; // local dev fallback
+  }
+
+  // No secret configured → bypass (not set up yet)
   if (!secret) return true;
   // Secret is configured but no token → reject
   if (!token) return false;
