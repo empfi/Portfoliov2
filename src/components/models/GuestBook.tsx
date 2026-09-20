@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useRef, useEffect, useState, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { useSpring, animated } from '@react-spring/three';
 import { RoundedBox, Text, Html } from '@react-three/drei';
 import { useFocus } from '@/context/FocusContext';
@@ -208,16 +209,15 @@ export function GuestBook() {
       position={bookPos as any} rotation={bookRot as any} scale={bookScale as any}
       onPointerDown={stopProp} onPointerUp={stopProp} onPointerMove={stopProp} onDoubleClick={stopProp}
     >
-      {isOpen && process.env.NODE_ENV === 'production' && process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY && (
-        <Html transform={false} position={[0, 0, 0]}>
-          <div style={{ position: 'absolute', top: '-9999px', left: '-9999px' }}>
-            <Turnstile 
-              siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY} 
-              onSuccess={setTurnstileToken} 
-              options={{ action: 'submit_guestbook' }}
-            />
-          </div>
-        </Html>
+      {isOpen && process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY && typeof document !== 'undefined' && createPortal(
+        <div style={{ position: 'fixed', top: '-9999px', left: '-9999px' }}>
+          <Turnstile
+            siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY}
+            onSuccess={setTurnstileToken}
+            options={{ size: 'invisible', action: 'submit_guestbook' }}
+          />
+        </div>,
+        document.body
       )}
 
       {/* ── geometry ── */}

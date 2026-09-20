@@ -29,9 +29,11 @@ async function getDB() {
 
 async function verifyTurnstile(token: string | null) {
   const secret = process.env.TURNSTILE_SECRET;
-  // Bypass if no secret configured or no token (widget not yet loaded)
-  if (!secret || !token) return true;
-  
+  // No secret configured → Turnstile not set up yet, bypass
+  if (!secret) return true;
+  // Secret is configured but no token → reject
+  if (!token) return false;
+
   const formData = new FormData();
   formData.append('secret', secret);
   formData.append('response', token);
