@@ -493,7 +493,7 @@ function SpotifyScreen({ spotifyData, spotifyDataRef, openApp }: any) {
 
       {/* Header */}
       <Text fontSize={0.045} color="#ffffff" position={[0, TY, -1.0]} rotation={R as any} anchorX="center" fontWeight="bold">
-        {spotifyData ? truncate(spotifyData.album, 35) : 'NOT PLAYING'}
+        {spotifyData ? truncate(spotifyData.album, 35) : ''}
       </Text>
 
       {/* Album Art Area */}
@@ -512,10 +512,10 @@ function SpotifyScreen({ spotifyData, spotifyDataRef, openApp }: any) {
 
       {/* Song Info */}
       <Text fontSize={0.075} color="#ffffff" position={[-0.5, TY, 0.33]} rotation={R as any} anchorX="left" anchorY="top" fontWeight="bold">
-        {spotifyData ? truncate(spotifyData.song, 22) : 'No Track'}
+        {spotifyData ? truncate(spotifyData.song, 22) : ''}
       </Text>
       <Text fontSize={0.05} color="#b3b3b3" position={[-0.5, TY, 0.58]} rotation={R as any} anchorX="left" anchorY="top">
-        {spotifyData ? truncate(spotifyData.artist, 32) : 'Play Spotify on PC/Phone'}
+        {spotifyData ? truncate(spotifyData.artist, 32) : ''}
       </Text>
 
       {/* Progress Bar Background */}
