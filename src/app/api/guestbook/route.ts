@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
 export interface GuestbookEntry {
   id: string;
@@ -14,17 +14,15 @@ let memoryEntries: GuestbookEntry[] = [
 ];
 
 async function getDB() {
-  if (process.env.NODE_ENV === 'production') {
-    try {
-      const { getCloudflareContext } = await import('@opennextjs/cloudflare');
-      const ctx = getCloudflareContext();
-      const env = ctx?.env as any;
-      if (env && env.DB) {
-        return env.DB;
-      }
-    } catch (e) {
-      console.warn("Could not load Cloudflare DB context:", e);
+  try {
+    const { getCloudflareContext } = await import('@opennextjs/cloudflare');
+    const ctx = await getCloudflareContext({ async: true });
+    const env = ctx?.env as any;
+    if (env && env.DB) {
+      return env.DB;
     }
+  } catch (e) {
+    console.warn("Could not load Cloudflare DB context:", e);
   }
   return null;
 }
