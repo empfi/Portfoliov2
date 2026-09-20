@@ -18,8 +18,9 @@ async function getDB() {
     try {
       const { getCloudflareContext } = await import('@opennextjs/cloudflare');
       const ctx = getCloudflareContext();
-      if (ctx && ctx.env && ctx.env.DB) {
-        return ctx.env.DB as any;
+      const env = ctx?.env as any;
+      if (env && env.DB) {
+        return env.DB;
       }
     } catch (e) {
       console.warn("Could not load Cloudflare DB context:", e);
