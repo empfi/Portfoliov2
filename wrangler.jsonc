@@ -3,6 +3,9 @@
 	"main": ".open-next/worker.js",
 	"name": "portfolio",
 	"compatibility_date": "2026-09-20",
+	"vars": {
+		"NEXT_PUBLIC_TURNSTILE_SITE_KEY": "0x4AAAAAAE-EEOIDJDcAcgab"
+	},
 	"compatibility_flags": [
 		"nodejs_compat",
 		"global_fetch_strictly_public"
