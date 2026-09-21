@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useRef, useState } from 'react';
+import { Turnstile } from '@marsidev/react-turnstile';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { ContactShadows, PerspectiveCamera, useTexture } from '@react-three/drei';
 import { useSpring, animated } from '@react-spring/three';
@@ -184,6 +185,7 @@ export default function DeskScene() {
           <ContactShadows position={[0, 0.05, 0]} opacity={0.8} scale={15} blur={2} far={2} resolution={1024} color="#000000" />
         </Canvas>
         <ProjectOverlay />
+        <GuestbookOverlay />
       </FocusProvider>
     </div>
   );
@@ -196,13 +198,14 @@ function GuestbookOverlay() {
   const [name, setName] = useState('');
   const [msg, setMsg] = useState('');
   const [loading, setLoading] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     await fetch('/api/guestbook', {
       method: 'POST',
-      body: JSON.stringify({ name, message: msg }),
+      body: JSON.stringify({ name, message: msg, token: turnstileToken }),
       headers: { 'Content-Type': 'application/json' }
     });
     setName('');
@@ -237,6 +240,16 @@ function GuestbookOverlay() {
           onChange={e => setMsg(e.target.value)}
           style={{ padding: '10px 14px', fontSize: '16px', background: '#262626', border: '1px solid #444', color: '#f5f5f5', borderRadius: '4px', outline: 'none', minHeight: '120px', resize: 'none' }}
         />
+        {/* Turnstile — invisible, runs silently in real DOM (outside Canvas) */}
+        {process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY && (
+          <div style={{ position: 'absolute', top: '-9999px', left: '-9999px' }}>
+            <Turnstile
+              siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY}
+              onSuccess={setTurnstileToken}
+              options={{ appearance: 'interaction-only', action: 'submit_guestbook' }}
+            />
+          </div>
+        )}
         <button
           disabled={loading}
           type="submit"

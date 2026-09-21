@@ -1,11 +1,9 @@
 "use client";
 
-import React, { useRef, useEffect, useState, useMemo } from 'react';
-import { createPortal } from 'react-dom';
+import React, { useEffect, useState } from 'react';
 import { useSpring, animated } from '@react-spring/three';
 import { RoundedBox, Text, Html } from '@react-three/drei';
 import { useFocus } from '@/context/FocusContext';
-import { Turnstile } from '@marsidev/react-turnstile';
 
 const FONT = '/fonts/caveat.woff';
 const MAX_CHARS = 250;
@@ -20,7 +18,6 @@ export function GuestBook() {
   const [entries, setEntries]         = useState<any[]>([]);
   const [spread, setSpread]           = useState(0);
   const [selectedAll, setSelectedAll] = useState(false);
-  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
 
   // Layout synchronization states
   const [inputLines, setInputLines]   = useState(1);
@@ -102,14 +99,14 @@ export function GuestBook() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [isOpen, typed, selectedAll, turnstileToken]);
+  }, [isOpen, typed, selectedAll]);
 
   const submitText = async (text: string) => {
     if (!text.trim() || loading) return;
     setLoading(true);
     await fetch('/api/guestbook', {
       method: 'POST',
-      body: JSON.stringify({ name: 'Anonymous', message: text.trim(), token: turnstileToken }),
+      body: JSON.stringify({ name: 'Anonymous', message: text.trim() }),
       headers: { 'Content-Type': 'application/json' }
     });
     setTyped('');
@@ -209,17 +206,6 @@ export function GuestBook() {
       position={bookPos as any} rotation={bookRot as any} scale={bookScale as any}
       onPointerDown={stopProp} onPointerUp={stopProp} onPointerMove={stopProp} onDoubleClick={stopProp}
     >
-      {isOpen && process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY && typeof document !== 'undefined' && createPortal(
-        <div style={{ position: 'fixed', top: '-9999px', left: '-9999px' }}>
-          <Turnstile
-            siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY}
-            onSuccess={setTurnstileToken}
-            options={{ appearance: 'interaction-only', action: 'submit_guestbook' }}
-          />
-        </div>,
-        document.body
-      )}
-
       {/* ── geometry ── */}
       <RoundedBox args={[2.7, 0.04, 3.5]} position={[0, -0.02, 0]} radius={0.02} smoothness={4}
         castShadow receiveShadow onClick={onClickBook} onPointerOver={over} onPointerOut={out}>
