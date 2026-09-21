@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useSpring, animated } from '@react-spring/three';
 import { RoundedBox, Text, Html } from '@react-three/drei';
 import { useFocus } from '@/context/FocusContext';
@@ -17,7 +17,8 @@ export function GuestBook() {
   const [typed, setTyped]             = useState('');
   const [cursor, setCursor]           = useState(true);
   const [loading, setLoading]         = useState(false);
-  const [entries, setEntries]         = useState<any[]>([]);
+  const [pageCache, setPageCache]     = useState<Record<number, any[]>>({});
+  const [totalPages, setTotalPages]   = useState(1);
   const [spread, setSpread]           = useState(0);
   const [selectedAll, setSelectedAll] = useState(false);
 
@@ -44,18 +45,39 @@ export function GuestBook() {
     return currentLc;
   };
 
-  /* ── fetch ── */
-  const fetchEntries = async () => {
-    const res = await fetch('/api/guestbook');
-    const data = await res.json();
-    setEntries(data.entries || []);
-  };
+  /* ── Lazy on-demand paginated fetch: ONLY when book is open ── */
+  const fetchPage = useCallback(async (pageNumber: number) => {
+    try {
+      const res = await fetch(`/api/guestbook?page=${pageNumber}&limit=8`);
+      const data = await res.json();
+      if (data.entries) {
+        setPageCache(prev => ({ ...prev, [pageNumber]: data.entries }));
+      }
+      if (data.totalPages) {
+        setTotalPages(data.totalPages);
+      }
+    } catch (err) {
+      console.error('Failed to load guestbook page', err);
+    }
+  }, []);
+
   useEffect(() => {
-    fetchEntries();
-    const h = () => fetchEntries();
+    // Only fetch if book is open AND this page isn't already cached
+    if (isOpen && !pageCache[spread + 1]) {
+      fetchPage(spread + 1);
+    }
+  }, [isOpen, spread, pageCache, fetchPage]);
+
+  // When book is open and someone submits, refresh current page
+  useEffect(() => {
+    if (!isOpen) return;
+    const h = () => {
+      setPageCache({});
+      fetchPage(spread + 1);
+    };
     window.addEventListener('guestbook-updated', h);
     return () => window.removeEventListener('guestbook-updated', h);
-  }, []);
+  }, [isOpen, spread, fetchPage]);
 
   /* ── blinking cursor ── */
   useEffect(() => {
@@ -120,27 +142,28 @@ export function GuestBook() {
     setTyped('');
     setLoading(false);
     
-    // Jump back to page 1 to see the new entry
+    // Invalidate cache and jump back to page 1 to see the new entry
+    setPageCache({});
     setSpread(0);
+    fetchPage(1);
     window.dispatchEvent(new CustomEvent('guestbook-updated'));
   };
 
-  /* ── pagination & layout ── */
+  /* ── per-spread layout from current page cache ── */
   const PAGE_BOTTOM = -1.15;
-  const spreads: { left: any[], right: any[], leftPos: number[], rightPos: number[] }[] = [];
+  const currentEntries = pageCache[spread + 1] || [];
   
-  let currentLeft: any[] = [];
-  let currentRight: any[] = [];
-  let currentLeftPos: number[] = [];
-  let currentRightPos: number[] = [];
+  const currentLeft: any[] = [];
+  const currentRight: any[] = [];
+  const currentLeftPos: number[] = [];
+  const currentRightPos: number[] = [];
   
-  let leftY = 0.85; // first page below title
-  if (isOpen) leftY -= 0.35 + (inputLines - 1) * 0.216;
-  
+  const isFirstSpread = spread === 0;
+  let leftY = isFirstSpread ? (isOpen ? 0.85 - (0.35 + (inputLines - 1) * 0.216) : 0.85) : 1.25;
   let isLeft = true;
   let currentY = leftY;
 
-  for (const ent of entries) {
+  for (const ent of currentEntries) {
     const lines = entryLines[ent.id] || 1;
     const h = 0.35 + (lines - 1) * 0.216;
     
@@ -149,13 +172,7 @@ export function GuestBook() {
         isLeft = false;
         currentY = 1.25;
       } else {
-        spreads.push({ left: currentLeft, right: currentRight, leftPos: currentLeftPos, rightPos: currentRightPos });
-        currentLeft = [];
-        currentRight = [];
-        currentLeftPos = [];
-        currentRightPos = [];
-        isLeft = true;
-        currentY = 1.25; // Next spread left page starts at 1.25
+        break; // Filled current spread
       }
     }
     
@@ -169,21 +186,12 @@ export function GuestBook() {
       currentY -= h;
     }
   }
-  
-  if (currentLeft.length > 0 || currentRight.length > 0 || spreads.length === 0) {
-    spreads.push({ left: currentLeft, right: currentRight, leftPos: currentLeftPos, rightPos: currentRightPos });
-  }
 
-  const totalSpreads = spreads.length;
-  const safeSpread = Math.min(spread, totalSpreads - 1 >= 0 ? totalSpreads - 1 : 0);
-  const activeSpread = spreads[safeSpread] || { left: [], right: [], leftPos: [], rightPos: [] };
-  
-  const leftEntries = activeSpread.left;
-  const rightEntries = activeSpread.right;
-  const leftPositions = activeSpread.leftPos;
-  const rightPositions = activeSpread.rightPos;
-  
-  const isFirstSpread = safeSpread === 0;
+  const totalSpreads = Math.max(1, totalPages);
+  const leftEntries = currentLeft;
+  const rightEntries = currentRight;
+  const leftPositions = currentLeftPos;
+  const rightPositions = currentRightPos;
   
   const col = '#111827';
   const textOpacity = isOpen ? 1 : 0;

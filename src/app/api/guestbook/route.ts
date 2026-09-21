@@ -63,21 +63,49 @@ async function verifyTurnstile(token: string | null) {
   }
 }
 
-export async function GET() {
+export async function GET(req: Request) {
+  const { searchParams } = new URL(req.url);
+  const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
+  const limit = Math.min(50, Math.max(1, parseInt(searchParams.get('limit') || '8', 10)));
+  const offset = (page - 1) * limit;
+
   const db = await getDB();
   
   if (db) {
     try {
-      const { results } = await db.prepare("SELECT * FROM entries ORDER BY date DESC").all();
-      return NextResponse.json({ entries: results });
+      const countRow = await db.prepare("SELECT count(*) as total FROM entries").first<{ total: number }>();
+      const total = countRow?.total ?? 0;
+      const totalPages = Math.max(1, Math.ceil(total / limit));
+
+      const { results } = await db.prepare("SELECT * FROM entries ORDER BY date DESC LIMIT ? OFFSET ?")
+        .bind(limit, offset)
+        .all();
+
+      return NextResponse.json({
+        entries: results || [],
+        page,
+        limit,
+        total,
+        totalPages
+      });
     } catch (e) {
       console.error("DB error:", e);
     }
   }
 
   // Fallback
+  const total = memoryEntries.length;
+  const totalPages = Math.max(1, Math.ceil(total / limit));
   const sorted = [...memoryEntries].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  return NextResponse.json({ entries: sorted });
+  const paginated = sorted.slice(offset, offset + limit);
+
+  return NextResponse.json({
+    entries: paginated,
+    page,
+    limit,
+    total,
+    totalPages
+  });
 }
 
 export async function POST(req: Request) {
