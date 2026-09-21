@@ -205,7 +205,7 @@ function TurnstileWidget() {
       <Turnstile
         siteKey={siteKey}
         onSuccess={setToken}
-        options={{ appearance: 'interaction-only', action: 'submit_guestbook' }}
+        options={{ action: 'submit_guestbook' }}
       />
     </div>
   );
