@@ -4,12 +4,14 @@ import React, { useEffect, useState } from 'react';
 import { useSpring, animated } from '@react-spring/three';
 import { RoundedBox, Text, Html } from '@react-three/drei';
 import { useFocus } from '@/context/FocusContext';
+import { useTurnstile } from '@/context/TurnstileContext';
 
 const FONT = '/fonts/caveat.woff';
 const MAX_CHARS = 250;
 
 export function GuestBook() {
   const { focusedItem, setFocusedItem } = useFocus();
+  const { token: turnstileToken } = useTurnstile();
   const isOpen = focusedItem === 'guestbook';
 
   const [typed, setTyped]             = useState('');
@@ -106,7 +108,7 @@ export function GuestBook() {
     setLoading(true);
     await fetch('/api/guestbook', {
       method: 'POST',
-      body: JSON.stringify({ name: 'Anonymous', message: text.trim() }),
+      body: JSON.stringify({ name: 'Anonymous', message: text.trim(), token: turnstileToken }),
       headers: { 'Content-Type': 'application/json' }
     });
     setTyped('');

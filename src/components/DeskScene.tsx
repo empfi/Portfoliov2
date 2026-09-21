@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useRef, useState } from 'react';
+import React, { useRef } from 'react';
 import { Turnstile } from '@marsidev/react-turnstile';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { ContactShadows, PerspectiveCamera, useTexture } from '@react-three/drei';
 import { useSpring, animated } from '@react-spring/three';
 import { FocusProvider, useFocus } from '@/context/FocusContext';
+import { TurnstileProvider, useTurnstile } from '@/context/TurnstileContext';
 import RouteSync from './RouteSync';
 import { TexturedDesk } from './models/TexturedDesk';
 import { MinecraftBlock } from './models/MinecraftBlock';
@@ -149,118 +150,68 @@ function CameraRig() {
 
 export default function DeskScene() {
   return (
-    <div style={{
-      width: '100vw', height: '100vh',
-      position: 'absolute', top: 0, left: 0,
-      background: '#1a1209', // Natural fog color
-      touchAction: 'none',
-    }}>
-      <FocusProvider>
-        <RouteSync />
-        <Canvas shadows>
-          <fog attach="fog" args={['#1a1209', 15, 30]} />
-          <BackgroundClicker />
-          <CameraRig />
-          <SceneLighting />
+    <TurnstileProvider>
+      <div style={{
+        width: '100vw', height: '100vh',
+        position: 'absolute', top: 0, left: 0,
+        background: '#1a1209',
+        touchAction: 'none',
+      }}>
+        <FocusProvider>
+          <RouteSync />
+          {/* Invisible Turnstile widget — outside Canvas, no R3F conflict */}
+          <TurnstileWidget />
+          <Canvas shadows>
+            <fog attach="fog" args={['#1a1209', 15, 30]} />
+            <BackgroundClicker />
+            <CameraRig />
+            <SceneLighting />
 
-          {/* Desk */}
-          <group position={[0, -0.5, 0]}>
-            <TexturedDesk />
-          </group>
+            {/* Desk */}
+            <group position={[0, -0.5, 0]}>
+              <TexturedDesk />
+            </group>
 
-          <MinecraftBlock />
-          <LuaKey />
-          <MinedockServer />
-          <BloxvaultSafe />
-          <NeutrabotsToy />
-          <AnimatedBook />
-          <GuestBook />
-          
-          <Smartphone />
-          
-          <Polaroid id="polaroid_1" caption="Coming soon" defaultPos={[3.5, 0.02, 2.5]} defaultRot={[0, -0.2, 0]} />
-          <Polaroid id="polaroid_2" caption="Coming soon" defaultPos={[2.2, 0.02, 3.0]} defaultRot={[0, 0.3, 0]} />
-          <Polaroid id="polaroid_3" caption="Coming soon" defaultPos={[0.8, 0.02, 2.8]} defaultRot={[0, -0.1, 0]} />
+            <MinecraftBlock />
+            <LuaKey />
+            <MinedockServer />
+            <BloxvaultSafe />
+            <NeutrabotsToy />
+            <AnimatedBook />
+            <GuestBook />
+            
+            <Smartphone />
+            
+            <Polaroid id="polaroid_1" caption="Coming soon" defaultPos={[3.5, 0.02, 2.5]} defaultRot={[0, -0.2, 0]} />
+            <Polaroid id="polaroid_2" caption="Coming soon" defaultPos={[2.2, 0.02, 3.0]} defaultRot={[0, 0.3, 0]} />
+            <Polaroid id="polaroid_3" caption="Coming soon" defaultPos={[0.8, 0.02, 2.8]} defaultRot={[0, -0.1, 0]} />
 
-          <ContactShadows position={[0, 0.05, 0]} opacity={0.8} scale={15} blur={2} far={2} resolution={1024} color="#000000" />
-        </Canvas>
-        <ProjectOverlay />
-        <GuestbookOverlay />
-      </FocusProvider>
-    </div>
+            <ContactShadows position={[0, 0.05, 0]} opacity={0.8} scale={15} blur={2} far={2} resolution={1024} color="#000000" />
+          </Canvas>
+          <ProjectOverlay />
+        </FocusProvider>
+      </div>
+    </TurnstileProvider>
   );
 }
 
-function GuestbookOverlay() {
-  const { focusedItem } = useFocus();
-  const isOpen = focusedItem === 'guestbook';
-
-  const [name, setName] = useState('');
-  const [msg, setMsg] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
-
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    await fetch('/api/guestbook', {
-      method: 'POST',
-      body: JSON.stringify({ name, message: msg, token: turnstileToken }),
-      headers: { 'Content-Type': 'application/json' }
-    });
-    setName('');
-    setMsg('');
-    setLoading(false);
-    window.dispatchEvent(new CustomEvent('guestbook-updated'));
-  };
-
+/** Renders the invisible Turnstile widget in normal DOM (outside Canvas). Stores token in context. */
+function TurnstileWidget() {
+  const { setToken } = useTurnstile();
+  const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+  if (!siteKey) return null;
   return (
-    <div
-      className={`fixed top-1/2 left-4 md:left-12 -translate-y-1/2 w-[calc(100vw-32px)] sm:w-[380px] max-w-[380px]
-        bg-[#171717] rounded-sm p-8 text-[#f5f5f5] shadow-[10px_10px_0px_rgba(0,0,0,0.6)] border border-[#333333]
-        transition-all duration-500 ease-out z-50
-        ${isOpen ? 'opacity-100 translate-x-0 pointer-events-auto' : 'opacity-0 -translate-x-12 pointer-events-none'}`}
-    >
-      <h2 style={{ fontFamily: "'Caveat', cursive", fontSize: '28px', marginBottom: '20px', color: '#f5f5f5' }}>
-        Sign the Guestbook ✍️
-      </h2>
-      <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        <input
-          type="text"
-          placeholder="Your Name"
-          required
-          value={name}
-          onChange={e => setName(e.target.value)}
-          style={{ padding: '10px 14px', fontSize: '16px', background: '#262626', border: '1px solid #444', color: '#f5f5f5', borderRadius: '4px', outline: 'none' }}
-        />
-        <textarea
-          placeholder="Your Message..."
-          required
-          value={msg}
-          onChange={e => setMsg(e.target.value)}
-          style={{ padding: '10px 14px', fontSize: '16px', background: '#262626', border: '1px solid #444', color: '#f5f5f5', borderRadius: '4px', outline: 'none', minHeight: '120px', resize: 'none' }}
-        />
-        {/* Turnstile — invisible, runs silently in real DOM (outside Canvas) */}
-        {process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY && (
-          <div style={{ position: 'absolute', top: '-9999px', left: '-9999px' }}>
-            <Turnstile
-              siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY}
-              onSuccess={setTurnstileToken}
-              options={{ appearance: 'interaction-only', action: 'submit_guestbook' }}
-            />
-          </div>
-        )}
-        <button
-          disabled={loading}
-          type="submit"
-          style={{ padding: '12px', fontSize: '18px', background: '#8b5a2b', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontFamily: "'Caveat', cursive" }}
-        >
-          {loading ? 'Signing...' : 'Sign'}
-        </button>
-      </form>
+    <div style={{ position: 'fixed', top: '-9999px', left: '-9999px' }}>
+      <Turnstile
+        siteKey={siteKey}
+        onSuccess={setToken}
+        options={{ appearance: 'interaction-only', action: 'submit_guestbook' }}
+      />
     </div>
   );
 }
+
+
 
 function ProjectOverlay() {
   const { focusedItem } = useFocus();
