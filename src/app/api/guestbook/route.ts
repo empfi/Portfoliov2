@@ -38,6 +38,8 @@ async function verifyTurnstile(token: string | null) {
     secret = process.env.TURNSTILE_SECRET; // local dev fallback
   }
 
+  console.log('[Turnstile] secret found:', !!secret, '| secret length:', secret?.length ?? 0);
+
   // No secret configured → bypass (not set up yet)
   if (!secret) return true;
   // Secret is configured but no token → reject
@@ -53,8 +55,10 @@ async function verifyTurnstile(token: string | null) {
       body: formData
     });
     const data = await res.json();
+    console.log('[Turnstile] siteverify response:', JSON.stringify(data));
     return data.success;
   } catch (e) {
+    console.error('[Turnstile] fetch error:', e);
     return false;
   }
 }
