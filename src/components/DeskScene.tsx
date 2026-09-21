@@ -201,13 +201,11 @@ function TurnstileWidget() {
   const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
   if (!siteKey) return null;
   return (
-    <div style={{ position: 'fixed', top: '-9999px', left: '-9999px' }}>
-      <Turnstile
-        siteKey={siteKey}
-        onSuccess={setToken}
-        options={{ action: 'submit_guestbook' }}
-      />
-    </div>
+    <Turnstile
+      siteKey={siteKey}
+      onSuccess={setToken}
+      options={{ action: 'submit_guestbook' }}
+    />
   );
 }
 
