@@ -13,15 +13,21 @@ export function LuaKey() {
   const isDragging = useRef(false);
   const isPointerDown = useRef(false);
   const angularVelocity = useRef({ x: 0, y: 0 });
+  const isInitial = useRef(true);
 
   const [{ pos, scale, rot }, api] = useSpring(() => ({
-    pos: [0.0, 0.05, -1.5], // Resting on the desk, safely above the book
+    pos: [0.5, 0.05, -1.5], // Resting on the desk, safely above the book
     scale: [1, 1, 1],
     rot: [Math.PI / 2, 0, -0.4], // Flat on the desk, slightly angled
     config: { mass: 1, tension: 180, friction: 26, clamp: true },
   }));
 
   useEffect(() => {
+    if (isInitial.current) {
+      isInitial.current = false;
+      return;
+    }
+
     if (!isHeld) {
       rotQ.current.identity();
       angularVelocity.current = { x: 0, y: 0 };

@@ -22,14 +22,21 @@ export function MinedockServer() {
 
   useCursor(hovered, isHeld ? 'grab' : 'pointer', 'auto');
 
+  const isInitial = useRef(true);
+
   const [{ pos, scale, rot }, api] = useSpring(() => ({
-    pos: [3.0, 0.45, -3.2],
+    pos: [2.2, 0.45, -2.8],
     scale: [1, 1, 1],
     rot: [0, -0.4, 0],
     config: { mass: 1, tension: 180, friction: 26, clamp: true },
   }));
 
   useEffect(() => {
+    if (isInitial.current) {
+      isInitial.current = false;
+      return;
+    }
+
     if (!isHeld) {
       rotQ.current.identity();
       angularVelocity.current = { x: 0, y: 0 };

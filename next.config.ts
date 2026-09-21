@@ -10,8 +10,9 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  eslint: {
-    ignoreDuringBuilds: true,
+  compress: true,
+  experimental: {
+    optimizePackageImports: ['@react-three/drei', 'three'],
   },
 };
 

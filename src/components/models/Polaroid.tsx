@@ -24,6 +24,8 @@ export function Polaroid({ id, caption, defaultPos, defaultRot }: Omit<PolaroidP
   const isPointerDown = useRef(false);
   const angularVelocity = useRef({ x: 0, y: 0 });
 
+  const isInitial = useRef(true);
+
   const [{ pos, scale, rot }, api] = useSpring(() => ({
     pos: defaultPos,
     scale: [1, 1, 1],
@@ -32,6 +34,11 @@ export function Polaroid({ id, caption, defaultPos, defaultRot }: Omit<PolaroidP
   }));
 
   useEffect(() => {
+    if (isInitial.current) {
+      isInitial.current = false;
+      return;
+    }
+
     if (!isFocused) {
       rotRef.current = { x: 0, y: 0, z: 0 };
       angularVelocity.current = { x: 0, y: 0 };

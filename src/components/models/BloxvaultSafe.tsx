@@ -19,14 +19,21 @@ export function BloxvaultSafe() {
 
   useCursor(hovered, isHeld ? 'grab' : 'pointer', 'auto');
 
+  const isInitial = useRef(true);
+
   const [{ pos, scale, rot }, api] = useSpring(() => ({
-    pos: [-3.0, 0.4, -3.0],
+    pos: [-2.5, 0.4, -2.5],
     scale: [1, 1, 1],
     rot: [0, -0.3, 0],
     config: { mass: 1, tension: 180, friction: 26, clamp: true },
   }));
 
   useEffect(() => {
+    if (isInitial.current) {
+      isInitial.current = false;
+      return;
+    }
+
     if (!isHeld) {
       rotQ.current.identity();
       angularVelocity.current = { x: 0, y: 0 };
@@ -72,6 +79,7 @@ export function BloxvaultSafe() {
     const dx = e.clientX - lastPointer.current.x;
     const dy = e.clientY - lastPointer.current.y;
     if (Math.abs(dx) > 2 || Math.abs(dy) > 2) isDragging.current = true;
+
     angularVelocity.current = { x: dy * 0.01, y: dx * 0.01 };
     const deltaQ = new THREE.Quaternion().setFromEuler(new THREE.Euler(dy * 0.005, dx * 0.005, 0, 'XYZ'));
     rotQ.current.premultiply(deltaQ);

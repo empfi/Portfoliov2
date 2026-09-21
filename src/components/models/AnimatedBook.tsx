@@ -6,8 +6,9 @@ import { RoundedBox, Text } from '@react-three/drei';
 import { useFocus } from '@/context/FocusContext';
 
 function LeftPageText({ visible }: { visible: boolean }) {
+  if (!visible) return null;
   const font = '/fonts/caveat.woff';
-  const color = visible ? '#111827' : '#ffffff00';
+  const color = '#111827';
   return (
     <group position={[1.25, -0.125, 0]} rotation={[Math.PI / 2, 0, Math.PI]}>
       <Text font={font} fontSize={0.35} color={color} anchorX="center" anchorY="top" position={[0, 1.35, 0]}>
@@ -24,7 +25,8 @@ function LeftPageText({ visible }: { visible: boolean }) {
 }
 
 function RightPageText({ visible }: { visible: boolean }) {
-  const color = visible ? '#111827' : '#ffffff00';
+  if (!visible) return null;
+  const color = '#111827';
   const font = '/fonts/caveat.woff';
 
   return (

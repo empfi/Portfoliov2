@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef } from 'react';
+import React, { useRef, useEffect, Suspense } from 'react';
 import { Turnstile } from '@marsidev/react-turnstile';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { ContactShadows, PerspectiveCamera, useTexture } from '@react-three/drei';
@@ -20,11 +20,12 @@ import { BloxvaultSafe } from './models/BloxvaultSafe';
 import { NeutrabotsToy } from './models/NeutrabotsToy';
 import * as THREE from 'three';
 
-// Preload textures
+// Preload compressed WebP textures
 useTexture.preload([
-  '/textures/wood/color.jpg',
-  '/textures/wood/normal.jpg',
-  '/textures/wood/roughness.jpg',
+  '/textures/wood/color.webp',
+  '/textures/wood/normal.webp',
+  '/textures/wood/roughness.webp',
+  '/wallpaper.webp',
 ]);
 
 function BackgroundClicker() {
@@ -81,6 +82,7 @@ function CameraRig() {
   const shouldSwoop = focusedItem === 'hyperplex' || focusedItem === 'luakey' || focusedItem === 'minedock' || focusedItem === 'bloxvault' || focusedItem === 'neutrabots' || focusedItem === 'mysterybox' || isPolaroid;
 
   const parallaxOffset = useRef({ x: 0, z: 0 });
+  const isInitial = useRef(true);
   const baseFov = viewport.aspect < 1.0 ? 55 : 35;
 
   useFrame((state, delta) => {
@@ -132,6 +134,14 @@ function CameraRig() {
     
     const finalQuat = shouldSwoop ? dummyCam.quaternion : topDownQuat;
 
+    // Skip intro animation on page load/reload — snap directly to resting position
+    if (isInitial.current) {
+      camera.position.copy(targetPos);
+      camera.quaternion.copy(finalQuat);
+      isInitial.current = false;
+      return;
+    }
+
     const lerpSpeed = shouldSwoop ? 5 : 3; 
     camera.position.lerp(targetPos, lerpSpeed * dt);
     camera.quaternion.slerp(finalQuat, lerpSpeed * dt);
@@ -141,6 +151,7 @@ function CameraRig() {
     <PerspectiveCamera
       makeDefault
       position={[0, 14, 0]} 
+      rotation={[-Math.PI / 2, 0, 0]}
       fov={baseFov}
       near={0.1}
       far={100}
@@ -159,6 +170,7 @@ export default function DeskScene() {
       }}>
         <FocusProvider>
           <RouteSync />
+          <KeyboardControls />
           {/* Invisible Turnstile widget — outside Canvas, no R3F conflict */}
           <TurnstileWidget />
           <Canvas shadows>
@@ -167,26 +179,28 @@ export default function DeskScene() {
             <CameraRig />
             <SceneLighting />
 
-            {/* Desk */}
-            <group position={[0, -0.5, 0]}>
-              <TexturedDesk />
-            </group>
+            <Suspense fallback={null}>
+              {/* Desk */}
+              <group position={[0, -0.5, 0]}>
+                <TexturedDesk />
+              </group>
 
-            <MinecraftBlock />
-            <LuaKey />
-            <MinedockServer />
-            <BloxvaultSafe />
-            <NeutrabotsToy />
-            <AnimatedBook />
-            <GuestBook />
-            
-            <Smartphone />
-            
-            <Polaroid id="polaroid_1" caption="Coming soon" defaultPos={[3.5, 0.02, 2.5]} defaultRot={[0, -0.2, 0]} />
-            <Polaroid id="polaroid_2" caption="Coming soon" defaultPos={[2.2, 0.02, 3.0]} defaultRot={[0, 0.3, 0]} />
-            <Polaroid id="polaroid_3" caption="Coming soon" defaultPos={[0.8, 0.02, 2.8]} defaultRot={[0, -0.1, 0]} />
+              <MinecraftBlock />
+              <LuaKey />
+              <MinedockServer />
+              <BloxvaultSafe />
+              <NeutrabotsToy />
+              <AnimatedBook />
+              <GuestBook />
+              
+              <Smartphone />
+              
+              <Polaroid id="polaroid_1" caption="Coming soon" defaultPos={[3.5, 0.02, 2.5]} defaultRot={[0, -0.2, 0]} />
+              <Polaroid id="polaroid_2" caption="Coming soon" defaultPos={[2.2, 0.02, 3.0]} defaultRot={[0, 0.3, 0]} />
+              <Polaroid id="polaroid_3" caption="Coming soon" defaultPos={[0.8, 0.02, 2.8]} defaultRot={[0, -0.1, 0]} />
 
-            <ContactShadows position={[0, 0.05, 0]} opacity={0.8} scale={15} blur={2} far={2} resolution={1024} color="#000000" />
+              <ContactShadows position={[0, 0.05, 0]} opacity={0.8} scale={15} blur={2} far={2} resolution={1024} color="#000000" />
+            </Suspense>
           </Canvas>
           <ProjectOverlay />
         </FocusProvider>
@@ -207,6 +221,23 @@ function TurnstileWidget() {
       options={{ action: 'submit_guestbook' }}
     />
   );
+}
+
+function KeyboardControls() {
+  const { focusedItem, setFocusedItem } = useFocus();
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && focusedItem !== null) {
+        e.preventDefault();
+        setFocusedItem(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [focusedItem, setFocusedItem]);
+
+  return null;
 }
 
 

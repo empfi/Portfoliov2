@@ -569,7 +569,7 @@ const APP_SCREENS: Record<AppId, React.FC> = {
   spotify: SpotifyScreen,
 };
 
-useTexture.preload('/wallpaper.jpg');
+useTexture.preload('/wallpaper.webp');
 
 // ─── Main Smartphone Component ───
 export function Smartphone() {
@@ -579,6 +579,12 @@ export function Smartphone() {
   
   // Track active app for exit animations
   const [activeApp, setActiveApp] = useState<AppId | null>(null);
+  useEffect(() => {
+    if (!isFocused) {
+      setOpenApp(null);
+    }
+  }, [isFocused]);
+
   useEffect(() => {
     if (openApp !== null) setActiveApp(openApp);
     let timeout: any;
@@ -609,7 +615,7 @@ export function Smartphone() {
 
   const { spotifyData, spotifyDataRef } = useSpotifyLanyard();
 
-  const wallpaperTex = useTexture('/wallpaper.jpg');
+  const wallpaperTex = useTexture('/wallpaper.webp');
   wallpaperTex.colorSpace = THREE.SRGBColorSpace;
   
   // Fix ShapeGeometry UVs (which map to world coords by default) and apply object-fit: cover

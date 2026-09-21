@@ -19,14 +19,21 @@ export function NeutrabotsToy() {
   
   useCursor(hovered, isHeld ? 'grab' : 'pointer', 'auto');
 
+  const isInitial = useRef(true);
+
   const [{ pos, scale, rot }, api] = useSpring(() => ({
-    pos: [6.5, 0.35, -4.0],
+    pos: [3.2, 0.35, -1.2],
     scale: [1, 1, 1],
-    rot: [0, -0.6, 0],
+    rot: [0, 0, 0],
     config: { mass: 1, tension: 180, friction: 26, clamp: true },
   }));
 
   useEffect(() => {
+    if (isInitial.current) {
+      isInitial.current = false;
+      return;
+    }
+
     if (!isHeld) {
       rotQ.current.identity();
       angularVelocity.current = { x: 0, y: 0 };

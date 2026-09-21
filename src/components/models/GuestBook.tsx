@@ -88,6 +88,12 @@ export function GuestBook() {
         }
       }
 
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        setFocusedItem(null);
+        return;
+      }
+
       if (e.key === 'Enter') {
         e.preventDefault();
         submitText(typed);
@@ -179,7 +185,8 @@ export function GuestBook() {
   
   const isFirstSpread = safeSpread === 0;
   
-  const col  = isOpen ? '#111827' : '#ffffff00';
+  const col = '#111827';
+  const textOpacity = isOpen ? 1 : 0;
   const inputY = 0.85; // Fixed start Y for the input
 
   /* ── spring ── */

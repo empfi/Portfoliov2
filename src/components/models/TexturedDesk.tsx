@@ -5,9 +5,9 @@ import { RoundedBox, useTexture } from '@react-three/drei';
 
 export function TexturedDesk() {
   const [colorMap, normalMap, roughnessMap] = useTexture([
-    '/textures/wood/color.jpg',
-    '/textures/wood/normal.jpg',
-    '/textures/wood/roughness.jpg',
+    '/textures/wood/color.webp',
+    '/textures/wood/normal.webp',
+    '/textures/wood/roughness.webp',
   ]);
   
   colorMap.colorSpace = THREE.SRGBColorSpace;
