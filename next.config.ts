@@ -5,7 +5,7 @@ const nextConfig: NextConfig = {
   output: "standalone",
   reactCompiler: true,
   env: {
-    NEXT_PUBLIC_TURNSTILE_SITE_KEY: '0x4AAAAAAE-EEOIDJDcAcgab',
+    NEXT_PUBLIC_TURNSTILE_SITE_KEY: '0x4AAAAAAE-EE0IDJDcAcgab',
   },
   typescript: {
     ignoreBuildErrors: true,

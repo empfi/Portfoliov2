@@ -4,7 +4,7 @@
 	"name": "portfolio",
 	"compatibility_date": "2026-09-20",
 	"vars": {
-		"NEXT_PUBLIC_TURNSTILE_SITE_KEY": "0x4AAAAAAE-EEOIDJDcAcgab"
+		"NEXT_PUBLIC_TURNSTILE_SITE_KEY": "0x4AAAAAAE-EE0IDJDcAcgab"
 	},
 	"compatibility_flags": [
 		"nodejs_compat",
