@@ -7,7 +7,7 @@ import { useFocus } from '@/context/FocusContext';
 import { useTurnstile } from '@/context/TurnstileContext';
 
 const FONT = '/fonts/caveat.woff';
-const MAX_CHARS = 250;
+const MAX_CHARS = 50;
 
 export function GuestBook() {
   const { focusedItem, setFocusedItem } = useFocus();
@@ -310,12 +310,7 @@ export function GuestBook() {
             </mesh>
           ))}
 
-          {leftEntries.length === 0 && entries.length === 0 && isFirstSpread && (
-            <Text font={FONT} fontSize={0.16} color={col} anchorX="center" anchorY="top"
-              position={[0, leftPositions[0] || 0.5, 0]} maxWidth={2.0} textAlign="center">
-              {"Be the first\nto sign!"}
-            </Text>
-          )}
+
 
           {/* Existing messages */}
           {leftEntries.map((ent, i) => (
