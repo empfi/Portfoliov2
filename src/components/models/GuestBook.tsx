@@ -7,7 +7,7 @@ import { useFocus } from '@/context/FocusContext';
 import { useTurnstile } from '@/context/TurnstileContext';
 
 const FONT = '/fonts/caveat.woff';
-const MAX_CHARS = 50;
+const MAX_CHARS = 100;
 
 export function GuestBook() {
   const { focusedItem, setFocusedItem } = useFocus();
