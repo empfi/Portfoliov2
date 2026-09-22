@@ -18,6 +18,7 @@ import { LuaKey } from './models/LuaKey';
 import { MinedockServer } from './models/MinedockServer';
 import { BloxvaultSafe } from './models/BloxvaultSafe';
 import { NeutrabotsToy } from './models/NeutrabotsToy';
+import MysteryBox from './models/MysteryBox';
 import * as THREE from 'three';
 
 // Preload compressed WebP textures
@@ -190,6 +191,7 @@ export default function DeskScene() {
               <MinedockServer />
               <BloxvaultSafe />
               <NeutrabotsToy />
+              <MysteryBox position={[-5.8, 0, -1.8]} />
               <AnimatedBook />
               <GuestBook />
               
