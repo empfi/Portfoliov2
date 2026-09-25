@@ -54,7 +54,10 @@ export function DeskShadows() {
     const table = portrait ? PORTRAIT : LANDSCAPE;
     entries.forEach(([id, [sx, sz, ox, oz]], i) => {
       const rest = table[id];
-      dummy.position.set((rest?.pos[0] ?? 0) + ox, 0.052, (rest?.pos[2] ?? 0) + oz);
+      // Just above the desk (0), safely below every item's own surface — the previous 0.052
+      // sat *above* the phone's screen once scaled to rest (~0.0475-0.052, depending on the
+      // element), so the blob won the depth test and showed in front of it.
+      dummy.position.set((rest?.pos[0] ?? 0) + ox, 0.008, (rest?.pos[2] ?? 0) + oz);
       // Rotation must be set per-instance, together with position: an instance's transform
       // is T*R*S like any object's, but the parent instancedMesh below has NO rotation of
       // its own — parent-rotating it while placing instances in that rotated local frame

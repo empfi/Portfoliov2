@@ -609,15 +609,11 @@ export function Smartphone() {
   const { focusedItem, setFocusedItem } = useFocus();
   const isFocused = focusedItem === 'phone';
   const rest = useRest('phone');
+  // Whatever app was open stays open across put-down/pick-up, like a real phone's screen
   const [openApp, setOpenApp] = useState<AppId | null>(null);
-  
+
   // Track active app for exit animations
   const [activeApp, setActiveApp] = useState<AppId | null>(null);
-  useEffect(() => {
-    if (!isFocused) {
-      setOpenApp(null);
-    }
-  }, [isFocused]);
 
   useEffect(() => {
     if (openApp !== null) setActiveApp(openApp);
