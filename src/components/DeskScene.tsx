@@ -164,10 +164,11 @@ export default function DeskScene() {
   return (
     <TurnstileProvider>
       <div style={{
-        width: '100vw', height: '100vh',
-        position: 'absolute', top: 0, left: 0,
+        width: '100dvw', height: '100dvh',
+        position: 'fixed', top: 0, left: 0,
         background: '#1a1209',
         touchAction: 'none',
+        overscrollBehavior: 'none',
       }}>
         <FocusProvider>
           <RouteSync />
@@ -284,8 +285,8 @@ function ProjectOverlay() {
   const data = focusedItem && projectData[focusedItem];
 
   return (
-    <div 
-      className={`fixed top-1/2 right-4 md:right-12 -translate-y-1/2 w-[calc(100vw-32px)] sm:w-[420px] max-w-[420px] bg-[#171717] rounded-sm p-8 text-[#f5f5f5] shadow-[10px_10px_0px_rgba(0,0,0,0.6)] border border-[#333333] transition-all duration-500 ease-out z-50 overflow-hidden ${data ? 'opacity-100 translate-x-0 pointer-events-auto' : 'opacity-0 translate-x-12 pointer-events-none'}`}
+    <div
+      className={`fixed top-1/2 right-4 md:right-12 -translate-y-1/2 w-[calc(100dvw-32px)] sm:w-[420px] max-w-[420px] max-h-[calc(100dvh-32px)] overflow-y-auto bg-[#171717] rounded-sm p-6 sm:p-8 text-[#f5f5f5] shadow-[10px_10px_0px_rgba(0,0,0,0.6)] border border-[#333333] transition-all duration-500 ease-out z-50 ${data ? 'opacity-100 translate-x-0 pointer-events-auto' : 'opacity-0 translate-x-12 pointer-events-none'}`}
     >
       {data && (
         <div className="flex flex-col h-full mt-2 relative">

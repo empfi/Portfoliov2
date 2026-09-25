@@ -28,6 +28,10 @@ export function GuestBook() {
 
   const inputRef = React.useRef<any>(null);
   const entryRefs = React.useRef<Record<string, any>>({});
+  // Real, invisible DOM input laid over the write-in line. Mobile browsers only
+  // raise the on-screen keyboard for a genuine tap on a focusable form element —
+  // the window 'keydown' listener below only ever sees a physical keyboard.
+  const hiddenInputRef = React.useRef<HTMLInputElement>(null);
 
   // Robust line measurement fallback for Troika 3D Text
   const measureLines = (mesh: any, currentLc: number) => {
@@ -86,10 +90,17 @@ export function GuestBook() {
     return () => clearInterval(t);
   }, [isOpen]);
 
-  /* ── keyboard capture ── */
+  /* ── keyboard capture (desktop: physical keyboard typed anywhere on the page) ── */
   useEffect(() => {
     if (!isOpen) return;
     const onKey = (e: KeyboardEvent) => {
+      // The hidden mobile input (below) already handles its own typing via
+      // native onChange — don't double-apply the same keystroke here.
+      if (document.activeElement === hiddenInputRef.current) {
+        if (e.key === 'Escape') setFocusedItem(null);
+        return;
+      }
+
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a') {
         e.preventDefault();
         setSelectedAll(true);
@@ -130,6 +141,17 @@ export function GuestBook() {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [isOpen, typed, selectedAll]);
+
+  /* ── mobile keyboard: focus the hidden input once the guestbook opens ── */
+  useEffect(() => {
+    if (isOpen && spread === 0) {
+      // Best-effort; iOS/Android will only actually raise the keyboard once the
+      // user taps the (invisible) input directly, which the Html overlay below covers.
+      hiddenInputRef.current?.focus({ preventScroll: true });
+    } else if (!isOpen) {
+      hiddenInputRef.current?.blur();
+    }
+  }, [isOpen, spread]);
 
   const submitText = async (text: string) => {
     if (!text.trim() || loading) return;
@@ -325,6 +347,52 @@ export function GuestBook() {
             </mesh>
           ))}
 
+          {/* Invisible tap target over the write-in line. Real <input> elements are
+              the only thing mobile browsers will raise the on-screen keyboard for —
+              a bare window keydown listener (above) never sees soft-keyboard input. */}
+          {isOpen && isFirstSpread && (
+            <Html transform distanceFactor={1.5} position={[0, inputY - 0.35, 0.02]} style={{ pointerEvents: 'auto' }}>
+              <input
+                ref={hiddenInputRef}
+                type="text"
+                inputMode="text"
+                enterKeyHint="send"
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="sentences"
+                spellCheck={false}
+                maxLength={MAX_CHARS}
+                value={typed}
+                onChange={(e) => setTyped(e.target.value.slice(0, MAX_CHARS))}
+                onSelect={(e) => {
+                  const el = e.currentTarget;
+                  setSelectedAll(el.value.length > 0 && el.selectionStart === 0 && el.selectionEnd === el.value.length);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    submitText(typed);
+                  } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    setFocusedItem(null);
+                  }
+                }}
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                  width: '320px',
+                  height: '160px',
+                  border: 'none',
+                  outline: 'none',
+                  background: 'transparent',
+                  color: 'transparent',
+                  caretColor: 'transparent',
+                  fontSize: '16px', // keeps iOS Safari from auto-zooming on focus
+                  padding: 0,
+                }}
+              />
+            </Html>
+          )}
 
 
           {/* Existing messages */}
