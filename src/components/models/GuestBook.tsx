@@ -4,6 +4,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useSpring, animated } from '@react-spring/three';
 import { RoundedBox, Text, Html } from '@react-three/drei';
 import { useFocus } from '@/context/FocusContext';
+import { useRest } from '@/context/DeskLayout';
 import { useTurnstile } from '@/context/TurnstileContext';
 
 const FONT = '/fonts/caveat.woff';
@@ -13,6 +14,7 @@ export function GuestBook() {
   const { focusedItem, setFocusedItem } = useFocus();
   const { token: turnstileToken } = useTurnstile();
   const isOpen = focusedItem === 'guestbook';
+  const rest = useRest('guestbook');
 
   const [typed, setTyped]             = useState('');
   const [cursor, setCursor]           = useState(true);
@@ -221,8 +223,8 @@ export function GuestBook() {
 
   /* ── spring ── */
   const { bookPos, bookRot, bookScale, coverRotation } = useSpring({
-    bookPos:       isOpen ? [1.25, 4.5, 0]           : [5.2, 0.06, -1.5],
-    bookRot:       isOpen ? [0, 0, 0]                 : [0, -0.3, 0],
+    bookPos:       isOpen ? [1.25, 4.5, 0]           : rest.pos,
+    bookRot:       isOpen ? [0, 0, 0]                 : rest.rot,
     bookScale:     isOpen ? [0.825, 0.825, 0.825]     : [0.75, 0.75, 0.75],
     coverRotation: isOpen ? Math.PI * 0.95            : 0,
     config: { mass: 1, tension: 160, friction: 30, clamp: true },

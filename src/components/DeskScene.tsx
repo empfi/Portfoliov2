@@ -3,11 +3,12 @@
 import React, { useRef, useEffect, Suspense } from 'react';
 import { Turnstile } from '@marsidev/react-turnstile';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { ContactShadows, PerspectiveCamera, useTexture } from '@react-three/drei';
+import { ContactShadows, Environment, Lightformer, PerspectiveCamera, useTexture } from '@react-three/drei';
 import { useSpring, animated } from '@react-spring/three';
 import { FocusProvider, useFocus } from '@/context/FocusContext';
 import { TurnstileProvider, useTurnstile } from '@/context/TurnstileContext';
 import RouteSync from './RouteSync';
+import { CONTENT, usePortrait } from '@/context/DeskLayout';
 import { TexturedDesk } from './models/TexturedDesk';
 import { MinecraftBlock } from './models/MinecraftBlock';
 import { AnimatedBook } from './models/AnimatedBook';
@@ -72,12 +73,24 @@ function SceneLighting() {
   );
 }
 
+// Soft "studio" reflections for the metal/glossy props. Rendered once into a cube map from
+// a few emissive panels, so it needs no HDR download (drei's presets fetch from a CDN).
+function StudioEnvironment() {
+  return (
+    <Environment resolution={128} environmentIntensity={0.55}>
+      <Lightformer intensity={2} color="#fff1e0" position={[0, 6, -8]} scale={[12, 5, 1]} />
+      <Lightformer intensity={1.2} color="#ffe6cc" position={[-8, 3, 3]} rotation-y={Math.PI / 2} scale={[8, 3, 1]} />
+      <Lightformer intensity={0.8} color="#dfe8ff" position={[8, 2, 3]} rotation-y={-Math.PI / 2} scale={[8, 3, 1]} />
+      <Lightformer form="ring" intensity={2.5} position={[0, 12, 0]} rotation-x={Math.PI / 2} scale={5} />
+      {/* Softbox behind the swoop camera so held items' front faces have something to reflect */}
+      <Lightformer intensity={1.6} color="#fff6ea" position={[0, 5, 10]} scale={[10, 4, 1]} />
+    </Environment>
+  );
+}
+
 const topDownQuat = new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0));
 const dummyCam = new THREE.PerspectiveCamera();
 
-// Everything resting on the desk fits inside this footprint (x = width, z = depth).
-const CONTENT_W = 13;
-const CONTENT_D = 7.4;
 // Swooped items are held at SWOOP_LOOK and viewed from SWOOP_LOOK + SWOOP_OFFSET.
 const SWOOP_LOOK = new THREE.Vector3(0, 4.5, 0);
 const SWOOP_OFFSET = new THREE.Vector3(0, 1.5, 9);
@@ -89,7 +102,7 @@ function CameraRig() {
   const { camera, size } = useThree();
 
   const aspect = size.width / size.height;
-  const portrait = aspect < 1;
+  const portrait = usePortrait();
   // Matches Tailwind's `sm` breakpoint, below which the project card is a bottom sheet
   const compact = size.width < 640;
   const fov = portrait ? 45 : 35;
@@ -104,11 +117,10 @@ function CameraRig() {
   // Height at which a top-down camera sees a patch `across` wide and `down` tall on screen
   const fitHeight = (across: number, down: number) => Math.max(down / (2 * tanHalf), across / (2 * tanHalf * aspect));
 
-  // Portrait screens get the desk turned 90° so its long edge runs down the screen.
+  // Frame the whole layout (portrait re-flows it into a tall grid, see DeskLayout).
   // Landscape keeps the original 14-unit height unless the window is too narrow for it.
-  const overviewHeight = portrait
-    ? fitHeight(CONTENT_D, CONTENT_W) * 1.05
-    : Math.max(14, fitHeight(CONTENT_W, CONTENT_D) * 1.05);
+  const content = portrait ? CONTENT.portrait : CONTENT.landscape;
+  const overviewHeight = Math.max(portrait ? 0 : 14, fitHeight(content.w, content.d) * 1.05);
   // Open books (~4.2 × 2.9, held at y 4.5) and the phone (~2.3 × 4.5, held at y 1.5, tilted
   // toward the camera so padded) are viewed upright from above; on desktop the overview
   // height already frames them.
@@ -121,13 +133,6 @@ function CameraRig() {
   // Portrait screens may move in closer than the desktop framing, but never farther than needed.
   const swoopWidth = hasCard ? 2.6 : 3.4;
   const swoopScale = Math.max(portrait ? 0.7 : 1, swoopWidth / (2 * SWOOP_OFFSET.length() * tanHalf * aspect));
-
-  const overviewQuat = React.useMemo(() => {
-    dummyCam.position.set(0, 0, 0);
-    dummyCam.up.set(portrait ? -1 : 0, 0, portrait ? 0 : -1);
-    dummyCam.lookAt(0, -1, 0);
-    return dummyCam.quaternion.clone();
-  }, [portrait]);
 
   // With the card docked at the bottom, pitch the view down so the held item sits in the top half
   const cardPitch = React.useMemo(
@@ -160,15 +165,7 @@ function CameraRig() {
     } else if (isPhone) {
       targetPos.set(0, phoneHeight, 0);
     } else {
-      targetPos.set(0, overviewHeight, 0);
-      // Nudge along the screen's axes, which are world -Z (right) / -X (up) when turned
-      if (portrait) {
-        targetPos.z -= px * 0.1;
-        targetPos.x += pz * 0.1;
-      } else {
-        targetPos.x += px * 0.1;
-        targetPos.z += pz * 0.1;
-      }
+      targetPos.set(px * 0.1, overviewHeight, pz * 0.1);
     }
 
     // Add subtle handheld breathing effect (disabled when focusing guestbook for stable typing)
@@ -197,7 +194,7 @@ function CameraRig() {
       if (compact && hasCard) swoopQuat.multiply(cardPitch);
       finalQuat = swoopQuat;
     } else {
-      finalQuat = isBook || isPhone ? topDownQuat : overviewQuat;
+      finalQuat = topDownQuat;
     }
 
     // Skip intro animation on page load/reload — snap directly to resting position
@@ -230,6 +227,7 @@ function CameraRig() {
 }
 
 export default function DeskScene() {
+  const portrait = usePortrait();
   return (
     <TurnstileProvider>
       <div style={{
@@ -248,10 +246,11 @@ export default function DeskScene() {
             <BackgroundClicker />
             <CameraRig />
             <SceneLighting />
+            <StudioEnvironment />
 
             <Suspense fallback={null}>
-              {/* Desk */}
-              <group position={[0, -0.5, 0]}>
+              {/* Desk — turned lengthwise on portrait screens to match the tall layout */}
+              <group position={[0, -0.5, 0]} rotation-y={portrait ? Math.PI / 2 : 0}>
                 <TexturedDesk />
               </group>
 
@@ -260,15 +259,15 @@ export default function DeskScene() {
               <MinedockServer />
               <BloxvaultSafe />
               <NeutrabotsToy />
-              <MysteryBox position={[-5.8, 0, -1.8]} />
+              <MysteryBox />
               <AnimatedBook />
               <GuestBook />
               
               <Smartphone />
               
-              <Polaroid id="polaroid_1" caption="Coming soon" defaultPos={[3.5, 0.02, 2.5]} defaultRot={[0, -0.2, 0]} />
-              <Polaroid id="polaroid_2" caption="Coming soon" defaultPos={[2.2, 0.02, 3.0]} defaultRot={[0, 0.3, 0]} />
-              <Polaroid id="polaroid_3" caption="Coming soon" defaultPos={[0.8, 0.02, 2.8]} defaultRot={[0, -0.1, 0]} />
+              <Polaroid id="polaroid_1" caption="Coming soon" />
+              <Polaroid id="polaroid_2" caption="Coming soon" />
+              <Polaroid id="polaroid_3" caption="Coming soon" />
 
               <ContactShadows position={[0, 0.05, 0]} opacity={0.8} scale={15} blur={2} far={2} resolution={1024} color="#000000" />
             </Suspense>

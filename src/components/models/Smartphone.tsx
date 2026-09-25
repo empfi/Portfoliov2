@@ -2,9 +2,10 @@
 import React, { useMemo, useState, useCallback, useEffect, Suspense, useRef } from 'react';
 import * as THREE from 'three';
 import { useSpring, animated } from '@react-spring/three';
-import { Text, useTexture, Html, RoundedBox } from '@react-three/drei';
+import { Text, useTexture, RoundedBox } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import { useFocus } from '@/context/FocusContext';
+import { useRest } from '@/context/DeskLayout';
 
 function makeRoundedRect(w: number, h: number, r: number) {
   const s = new THREE.Shape();
@@ -33,7 +34,18 @@ const SCREEN_SHAPE = makeRoundedRect(1.34, 2.74, 0.18);
 const ICON_SHAPE = makeRoundedRect(0.24, 0.24, 0.055);
 const HOME_BAR_SHAPE = makeRoundedRect(0.4, 0.015, 0.007);
 const ISLAND_SHAPE = makeRoundedRect(0.38, 0.12, 0.06);
-const ALBUM_SHAPE = makeRoundedRect(1.0, 1.0, 0.05);
+// Album art is drawn in WebGL rather than as <Html transform> overlays: CSS 3D placement
+// drifts per browser (badly on iOS Safari), leaving the cover outside the island.
+function albumArtGeometry(size: number, radius: number) {
+  const geo = new THREE.ShapeGeometry(makeRoundedRect(size, size, radius), 8);
+  // ShapeGeometry UVs are raw shape coordinates; remap them to 0..1 across the square
+  const pos = geo.attributes.position;
+  const uv = geo.attributes.uv;
+  for (let i = 0; i < uv.count; i++) uv.setXY(i, pos.getX(i) / size + 0.5, pos.getY(i) / size + 0.5);
+  return geo;
+}
+const ALBUM_ART_GEO = albumArtGeometry(1.0, 0.05);
+const ISLAND_ART_GEO = new THREE.CircleGeometry(0.045, 32);
 const SPOTIFY_BTN_SHAPE = makeRoundedRect(0.7, 0.15, 0.075);
 
 let githubTex: THREE.Texture | null = null;
@@ -102,7 +114,15 @@ const GRID_APPS = [
 function LiveTime() {
   const [time, setTime] = useState('');
   useEffect(() => {
-    const update = () => setTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+    // Status-bar style: no AM/PM (it would also sit under the expanded Dynamic Island)
+    const update = () => setTime(
+      new Intl.DateTimeFormat([], { hour: 'numeric', minute: '2-digit' })
+        .formatToParts(new Date())
+        .filter((p) => p.type !== 'dayPeriod')
+        .map((p) => p.value)
+        .join('')
+        .trim(),
+    );
     update();
     const int = setInterval(update, 1000);
     return () => clearInterval(int);
@@ -326,13 +346,8 @@ function DynamicIsland({ spotifyData, openApp }: { spotifyData: any; openApp: st
   const bar1Ref = useRef<THREE.Mesh>(null);
   const bar2Ref = useRef<THREE.Mesh>(null);
   const bar3Ref = useRef<THREE.Mesh>(null);
-  const albumDivRef = useRef<HTMLDivElement>(null);
 
   useFrame((state) => {
-    const w = islandW.get();
-    const opacity = Math.max(0, (w - 0.38) / 0.22);
-    if (albumDivRef.current) albumDivRef.current.style.opacity = opacity.toString();
-
     if (showExpanded && bar1Ref.current && bar2Ref.current && bar3Ref.current) {
       const t = state.clock.elapsedTime;
       const s1 = 0.3 + Math.abs(Math.sin(t * 8)) * 0.7;
@@ -379,21 +394,16 @@ function DynamicIsland({ spotifyData, openApp }: { spotifyData: any; openApp: st
         </mesh>
       </animated.group>
 
-      {/* Album Art Overlay */}
-      {spotifyData && spotifyData.album_art_url && (
+      {/* Album art in the island's left cap, fading in as the island expands */}
+      {spotifyData?.album_art_url && (
         <animated.group position-x={albumX as any} position-y={0.001}>
-          <mesh rotation={R as any}>
-            <circleGeometry args={[0.06, 32]} />
-            <meshBasicMaterial transparent opacity={0} />
-          </mesh>
-          <Html transform rotation={R as any} distanceFactor={1.2} style={{ pointerEvents: 'none' }}>
-            <div ref={albumDivRef} style={{ opacity: 0 }}>
-              <CrossfadeImage 
-                url={spotifyData.album_art_url}
-                style={{ width: '30px', height: '30px', borderRadius: '50%' }}
-              />
-            </div>
-          </Html>
+          <group rotation={R as any}>
+            <CrossfadeArt
+              url={spotifyData.album_art_url}
+              geometry={ISLAND_ART_GEO}
+              getOpacity={() => Math.max(0, (islandW.get() - 0.38) / 0.22)}
+            />
+          </group>
         </animated.group>
       )}
 
@@ -416,47 +426,55 @@ function DynamicIsland({ spotifyData, openApp }: { spotifyData: any; openApp: st
   );
 }
 
-function CrossfadeImage({ url, style, blur = false }: { url: string, style: any, blur?: boolean }) {
-  const [images, setImages] = useState([{ url, id: Date.now() }]);
-  
+// Loads each new cover as a texture and keeps the previous one underneath while it fades in
+function useCrossfadeTextures(url?: string) {
+  const [layers, setLayers] = useState<{ tex: THREE.Texture; born: number }[]>([]);
   useEffect(() => {
-    if (url && images[images.length - 1]?.url !== url) {
-      const newId = Date.now();
-      setImages(prev => [...prev, { url, id: newId }]);
-      setTimeout(() => {
-        setImages(current => current.filter(img => img.id === newId));
-      }, 1500);
-    }
+    if (!url) return;
+    let cancelled = false;
+    const loader = new THREE.TextureLoader();
+    loader.setCrossOrigin('anonymous');
+    loader.load(url, (tex) => {
+      if (cancelled) { tex.dispose(); return; }
+      tex.colorSpace = THREE.SRGBColorSpace;
+      setLayers((prev) => [...prev.slice(-1), { tex, born: performance.now() }]);
+    }, undefined, () => { /* keep showing the last cover if this one fails */ });
+    return () => { cancelled = true; };
   }, [url]);
+  return layers;
+}
 
+function ArtLayer({ tex, born, index, geometry, getOpacity }: {
+  tex: THREE.Texture; born: number; index: number; geometry: THREE.BufferGeometry; getOpacity?: () => number;
+}) {
+  const mat = useRef<THREE.MeshBasicMaterial>(null);
+  useEffect(() => () => tex.dispose(), [tex]);
+  useFrame(() => {
+    if (!mat.current) return;
+    const fade = Math.min(1, (performance.now() - born) / 1000);
+    mat.current.opacity = fade * (getOpacity ? getOpacity() : 1);
+  });
   return (
-    <div style={{ position: 'relative', width: style.width, height: style.height, pointerEvents: 'none' }}>
-      {images.map((img, i) => {
-        const isCurrent = i === images.length - 1;
-        return (
-          <img 
-            key={img.id}
-            src={img.url} 
-            alt="Art"
-            style={{ 
-              position: 'absolute',
-              top: '50%', left: '50%',
-              transform: 'translate(-50%, -50%)',
-              width: '100%', height: '100%', 
-              objectFit: 'cover',
-              borderRadius: style.borderRadius || 0,
-              filter: blur ? 'blur(80px) brightness(0.4) saturate(1.5)' : 'none',
-              opacity: isCurrent ? 1 : 0,
-              transition: 'opacity 1s ease-in-out',
-            }} 
-          />
-        );
-      })}
-    </div>
+    <mesh geometry={geometry} position={[0, 0, index * 0.0005]} renderOrder={index}>
+      <meshBasicMaterial ref={mat} map={tex} transparent opacity={0} depthWrite={false} toneMapped={false} />
+    </mesh>
   );
 }
 
-function SpotifyScreen({ spotifyData, spotifyDataRef, openApp }: any) {
+function CrossfadeArt({ url, geometry, getOpacity }: {
+  url: string; geometry: THREE.BufferGeometry; getOpacity?: () => number;
+}) {
+  const layers = useCrossfadeTextures(url);
+  return (
+    <>
+      {layers.map((l, i) => (
+        <ArtLayer key={l.born} tex={l.tex} born={l.born} index={i} geometry={geometry} getOpacity={getOpacity} />
+      ))}
+    </>
+  );
+}
+
+function SpotifyScreen({ spotifyData, spotifyDataRef }: any) {
   const progressRef = useRef<THREE.Mesh>(null);
   const timeTextRef = useRef<any>(null);
   const totalTextRef = useRef<any>(null);
@@ -500,19 +518,12 @@ function SpotifyScreen({ spotifyData, spotifyDataRef, openApp }: any) {
         {spotifyData ? truncate(spotifyData.album, 35) : ''}
       </Text>
 
-      {/* Album Art Area */}
-      <mesh position={[0, TY, -0.4]} rotation={R as any}>
-        <planeGeometry args={[1.2, 1.2]} />
-        <meshBasicMaterial transparent opacity={0} />
-        {openApp === 'spotify' && spotifyData && spotifyData.album_art_url && (
-          <Html transform position={[0, 0, 0.01]} distanceFactor={1.2} style={{ pointerEvents: 'none' }}>
-            <CrossfadeImage 
-              url={spotifyData.album_art_url} 
-              style={{ width: '335px', height: '335px', borderRadius: '16px' }} 
-            />
-          </Html>
-        )}
-      </mesh>
+      {/* Album Art */}
+      {spotifyData?.album_art_url && (
+        <group position={[0, TY + 0.001, -0.4]} rotation={R as any}>
+          <CrossfadeArt url={spotifyData.album_art_url} geometry={ALBUM_ART_GEO} />
+        </group>
+      )}
 
       {/* Song Info */}
       <Text font={SANS_BOLD} fontSize={0.075} color="#ffffff" position={[-0.5, TY, 0.33]} rotation={R as any} anchorX="left" anchorY="top">
@@ -579,6 +590,7 @@ useTexture.preload('/wallpaper.webp');
 export function Smartphone() {
   const { focusedItem, setFocusedItem } = useFocus();
   const isFocused = focusedItem === 'phone';
+  const rest = useRest('phone');
   const [openApp, setOpenApp] = useState<AppId | null>(null);
   
   // Track active app for exit animations
@@ -655,8 +667,8 @@ export function Smartphone() {
   }, []);
 
   const { pos, rot, scale } = useSpring({
-    pos: isFocused ? [0, 1.5, 0] : [-4.0, 0.04, -0.5],
-    rot: isFocused ? [0.25, 0, 0] : [0, 0.2, 0],
+    pos: isFocused ? [0, 1.5, 0] : rest.pos,
+    rot: isFocused ? [0.25, 0, 0] : rest.rot,
     scale: isFocused ? [1.6, 1.6, 1.6] : [0.75, 0.75, 0.75],
     config: { mass: 1, tension: 180, friction: 26, clamp: true },
   });
@@ -743,7 +755,7 @@ export function Smartphone() {
             <animated.group position={appPos as any} scale={appScale as any}>
               {activeApp === 'contact' && <ContactScreen />}
               {activeApp === 'github' && <GitHubScreen />}
-              {activeApp === 'spotify' && <SpotifyScreen spotifyData={spotifyData} spotifyDataRef={spotifyDataRef} openApp={openApp} />}
+              {activeApp === 'spotify' && <SpotifyScreen spotifyData={spotifyData} spotifyDataRef={spotifyDataRef} />}
             </animated.group>
           )}
         </group>

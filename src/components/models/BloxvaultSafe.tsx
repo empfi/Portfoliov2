@@ -4,11 +4,13 @@ import * as THREE from 'three';
 import { useSpring, animated } from '@react-spring/three';
 import { useFrame, ThreeEvent } from '@react-three/fiber';
 import { useFocus } from '@/context/FocusContext';
+import { useRest } from '@/context/DeskLayout';
 import { useCursor, RoundedBox } from '@react-three/drei';
 
 export function BloxvaultSafe() {
   const { focusedItem, setFocusedItem } = useFocus();
   const isHeld = focusedItem === 'bloxvault';
+  const rest = useRest('bloxvault');
 
   const rotQ = useRef(new THREE.Quaternion());
   const lastPointer = useRef({ x: 0, y: 0 });
@@ -22,9 +24,9 @@ export function BloxvaultSafe() {
   const isInitial = useRef(true);
 
   const [{ pos, scale, rot }, api] = useSpring(() => ({
-    pos: [-2.5, 0.4, -2.5],
+    pos: rest.pos,
     scale: [1, 1, 1],
-    rot: [0, -0.3, 0],
+    rot: rest.rot,
     config: { mass: 1, tension: 180, friction: 26, clamp: true },
   }));
 
@@ -39,12 +41,12 @@ export function BloxvaultSafe() {
       angularVelocity.current = { x: 0, y: 0 };
     }
     api.start({
-      pos: isHeld ? [0, 4.5, 0] : [-2.5, 0.4, -2.5],
+      pos: isHeld ? [0, 4.5, 0] : rest.pos,
       scale: isHeld ? [2, 2, 2] : [1, 1, 1],
-      rot: isHeld ? [0, 0, 0] : [0, -0.3, 0],
+      rot: isHeld ? [0, 0, 0] : rest.rot,
       immediate: false,
     });
-  }, [isHeld, api]);
+  }, [isHeld, api, rest]);
 
   useFrame(() => {
     if (isHeld && !isPointerDown.current) {

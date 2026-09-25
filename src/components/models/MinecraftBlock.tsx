@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { useSpring, animated } from '@react-spring/three';
 import { useFrame, ThreeEvent } from '@react-three/fiber';
 import { useFocus } from '@/context/FocusContext';
+import { useRest } from '@/context/DeskLayout';
 
 function createBareBonesTexture(type: 'top' | 'side' | 'bottom') {
   if (typeof document === 'undefined') return null;
@@ -97,6 +98,7 @@ function createBareBonesTexture(type: 'top' | 'side' | 'bottom') {
 export function MinecraftBlock() {
   const { focusedItem, setFocusedItem } = useFocus();
   const isHeld = focusedItem === 'hyperplex';
+  const rest = useRest('hyperplex');
 
   const rotQ = useRef(new THREE.Quaternion());
   const lastPointer = useRef({ x: 0, y: 0 });
@@ -107,9 +109,9 @@ export function MinecraftBlock() {
   const isInitial = useRef(true);
 
   const [{ pos, scale, rot }, api] = useSpring(() => ({
-    pos: [1.5, 0.25, -1.0],
+    pos: rest.pos,
     scale: [1, 1, 1],
-    rot: [0, Math.PI / 4, 0],
+    rot: rest.rot,
     config: { mass: 1, tension: 180, friction: 26, clamp: true },
   }));
 
@@ -127,12 +129,12 @@ export function MinecraftBlock() {
     }
 
     api.start({
-      pos: isHeld ? [0, 4.5, 0] : [1.5, 0.25, -1.0],
+      pos: isHeld ? [0, 4.5, 0] : rest.pos,
       scale: isHeld ? [1.5, 1.5, 1.5] : [1, 1, 1],
-      rot: isHeld ? [0, Math.PI / 4, 0] : [0, Math.PI / 4, 0],
+      rot: isHeld ? [0, Math.PI / 4, 0] : rest.rot,
       immediate: false,
     });
-  }, [isHeld, api]);
+  }, [isHeld, api, rest]);
 
   useFrame(() => {
     if (isHeld && !isPointerDown.current) {

@@ -4,18 +4,17 @@ import * as THREE from 'three';
 import { useSpring, animated } from '@react-spring/three';
 import { useFrame, ThreeEvent } from '@react-three/fiber';
 import { useFocus } from '@/context/FocusContext';
+import { useRest } from '@/context/DeskLayout';
 import { useTexture, Text } from '@react-three/drei';
 
 interface PolaroidProps {
   id: string;
-  imageSrc: string;
   caption: string;
-  defaultPos: [number, number, number];
-  defaultRot: [number, number, number];
 }
 
-export function Polaroid({ id, caption, defaultPos, defaultRot }: Omit<PolaroidProps, 'imageSrc'>) {
+export function Polaroid({ id, caption }: PolaroidProps) {
   const { focusedItem, setFocusedItem } = useFocus();
+  const { pos: defaultPos, rot: defaultRot } = useRest(id);
   const isFocused = focusedItem === id;
 
   const rotRef = useRef({ x: defaultRot[0], y: defaultRot[1], z: defaultRot[2] });

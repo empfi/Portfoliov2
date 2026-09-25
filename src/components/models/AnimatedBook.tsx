@@ -4,6 +4,7 @@ import React from 'react';
 import { useSpring, animated } from '@react-spring/three';
 import { RoundedBox, Text } from '@react-three/drei';
 import { useFocus } from '@/context/FocusContext';
+import { useRest } from '@/context/DeskLayout';
 
 function LeftPageText({ visible }: { visible: boolean }) {
   if (!visible) return null;
@@ -62,10 +63,11 @@ export function AnimatedBook() {
   const { focusedItem, setFocusedItem } = useFocus();
   // Book is active if it is the currently focused item globally
   const isOpen = focusedItem === 'book';
+  const rest = useRest('book');
 
   const { bookPos, bookRot, bookScale, coverRotation } = useSpring({
-    bookPos: isOpen ? [1.25, 4.5, 0] : [-1.8, 0.06, 0.6],
-    bookRot: isOpen ? [0, 0, 0] : [0, -0.15, 0],
+    bookPos: isOpen ? [1.25, 4.5, 0] : rest.pos,
+    bookRot: isOpen ? [0, 0, 0] : rest.rot,
     bookScale: isOpen ? [0.825, 0.825, 0.825] : [0.75, 0.75, 0.75],
     coverRotation: isOpen ? Math.PI * 0.95 : 0,
     config: { mass: 1, tension: 160, friction: 30, clamp: true },

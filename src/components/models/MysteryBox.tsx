@@ -3,6 +3,7 @@ import { useFrame } from '@react-three/fiber';
 import { useSpring, animated } from '@react-spring/three';
 import * as THREE from 'three';
 import { useFocus } from '@/context/FocusContext';
+import { useRest } from '@/context/DeskLayout';
 import { useCursor, RoundedBox, Octahedron, Torus } from '@react-three/drei';
 
 function createQuestionMarkTexture() {
@@ -32,8 +33,9 @@ function createQuestionMarkTexture() {
   return tex;
 }
 
-export default function MysteryBox({ position = [3.5, 0.05, -1.5] }: { position?: [number, number, number] }) {
+export default function MysteryBox() {
   const { focusedItem, setFocusedItem } = useFocus();
+  const { pos: position } = useRest('mysterybox');
   const isFocused = focusedItem === 'mysterybox';
   
   const [hovered, setHovered] = useState(false);

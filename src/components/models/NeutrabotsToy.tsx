@@ -4,11 +4,13 @@ import * as THREE from 'three';
 import { useSpring, animated } from '@react-spring/three';
 import { useFrame, ThreeEvent } from '@react-three/fiber';
 import { useFocus } from '@/context/FocusContext';
+import { useRest } from '@/context/DeskLayout';
 import { useCursor, RoundedBox, Float } from '@react-three/drei';
 
 export function NeutrabotsToy() {
   const { focusedItem, setFocusedItem } = useFocus();
   const isHeld = focusedItem === 'neutrabots';
+  const rest = useRest('neutrabots');
 
   const rotQ = useRef(new THREE.Quaternion());
   const lastPointer = useRef({ x: 0, y: 0 });
@@ -22,9 +24,9 @@ export function NeutrabotsToy() {
   const isInitial = useRef(true);
 
   const [{ pos, scale, rot }, api] = useSpring(() => ({
-    pos: [3.2, 0.35, -1.2],
+    pos: rest.pos,
     scale: [1, 1, 1],
-    rot: [0, 0, 0],
+    rot: rest.rot,
     config: { mass: 1, tension: 180, friction: 26, clamp: true },
   }));
 
@@ -39,12 +41,12 @@ export function NeutrabotsToy() {
       angularVelocity.current = { x: 0, y: 0 };
     }
     api.start({
-      pos: isHeld ? [0, 4.5, 0] : [3.2, 0.35, -1.2],
+      pos: isHeld ? [0, 4.5, 0] : rest.pos,
       scale: isHeld ? [2, 2, 2] : [1, 1, 1],
-      rot: isHeld ? [0, 0, 0] : [0, 0, 0],
+      rot: isHeld ? [0, 0, 0] : rest.rot,
       immediate: false,
     });
-  }, [isHeld, api]);
+  }, [isHeld, api, rest]);
 
   useFrame((state, delta) => {
     if (isHeld && !isPointerDown.current) {
