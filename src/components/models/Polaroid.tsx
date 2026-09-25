@@ -140,6 +140,7 @@ export function Polaroid({ id, caption, defaultPos, defaultRot }: Omit<PolaroidP
       
       {/* Coming Soon Text inside photo area */}
       <Text 
+        font="/fonts/inter.woff"
         fontSize={0.08} 
         color="#ffffff" 
         position={[0, 0.012, -0.08]} 

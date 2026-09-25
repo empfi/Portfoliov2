@@ -21,6 +21,10 @@ function makeRoundedRect(w: number, h: number, r: number) {
   return s;
 }
 
+// Self-hosted so text never waits on troika's CDN font fallback
+const SANS = '/fonts/inter.woff';
+const SANS_BOLD = '/fonts/inter-bold.woff';
+
 const TOP = 0.01;
 const TY = TOP + 0.004; // text/content Y
 const R = [-Math.PI / 2, 0, 0] as const; // shared rotation
@@ -105,7 +109,7 @@ function LiveTime() {
   }, []);
 
   return (
-    <Text fontSize={0.075} color="#ffffff" position={[-0.53, TOP + 0.006, -1.26]} rotation={R as any} anchorX="left" anchorY="middle" fontWeight="bold">
+    <Text font={SANS_BOLD} fontSize={0.075} color="#ffffff" position={[-0.53, TOP + 0.006, -1.26]} rotation={R as any} anchorX="left" anchorY="middle">
       {time}
     </Text>
   );
@@ -140,7 +144,7 @@ function AppIcon({ x, z, app, onTap }: { x: number; z: number; app: AppDef; onTa
         <planeGeometry args={[0.12, 0.12]} />
         {tex && <meshBasicMaterial map={tex} transparent side={THREE.DoubleSide} />}
       </mesh>
-      <Text fontSize={0.045} color="#e2e8f0" position={[0, 0.001, 0.19]} rotation={R as any} anchorX="center" anchorY="middle">
+      <Text font={SANS} fontSize={0.045} color="#e2e8f0" position={[0, 0.001, 0.19]} rotation={R as any} anchorX="center" anchorY="middle">
         {app.label}
       </Text>
     </group>
@@ -152,7 +156,7 @@ function ContactScreen() {
   return (
     <group>
       <AppBackground color="#0f172a" />
-      <Text fontSize={0.12} color="#fff" position={[0, TY, -0.8]} rotation={R as any} anchorX="center">
+      <Text font={SANS} fontSize={0.12} color="#fff" position={[0, TY, -0.8]} rotation={R as any} anchorX="center">
         Contact
       </Text>
       
@@ -161,7 +165,7 @@ function ContactScreen() {
           <planeGeometry args={[0.16, 0.16]} />
           <meshBasicMaterial map={discordTex!} transparent side={THREE.DoubleSide} />
         </mesh>
-        <Text fontSize={0.07} color="#e2e8f0" position={[-0.2, 0, 0]} rotation={R as any} anchorX="left" anchorY="middle">
+        <Text font={SANS} fontSize={0.07} color="#e2e8f0" position={[-0.2, 0, 0]} rotation={R as any} anchorX="left" anchorY="middle">
           empfii
         </Text>
       </group>
@@ -171,7 +175,7 @@ function ContactScreen() {
           <planeGeometry args={[0.16, 0.16]} />
           <meshBasicMaterial map={githubTex!} transparent side={THREE.DoubleSide} />
         </mesh>
-        <Text fontSize={0.07} color="#e2e8f0" position={[-0.2, 0, 0]} rotation={R as any} anchorX="left" anchorY="middle">
+        <Text font={SANS} fontSize={0.07} color="#e2e8f0" position={[-0.2, 0, 0]} rotation={R as any} anchorX="left" anchorY="middle">
           empfi
         </Text>
       </group>
@@ -208,10 +212,10 @@ function GitHubScreen() {
         <meshBasicMaterial map={avatarTex || githubTex!} transparent side={THREE.DoubleSide} />
       </mesh>
       
-      <Text fontSize={0.12} color="#ffffff" position={[0, TY, -0.35]} rotation={R as any} anchorX="center">
+      <Text font={SANS} fontSize={0.12} color="#ffffff" position={[0, TY, -0.35]} rotation={R as any} anchorX="center">
         {data ? (data.name || data.login) : 'Loading...'}
       </Text>
-      <Text fontSize={0.06} color="#8b949e" position={[0, TY, -0.15]} rotation={R as any} anchorX="center">
+      <Text font={SANS} fontSize={0.06} color="#8b949e" position={[0, TY, -0.15]} rotation={R as any} anchorX="center">
         @empfi
       </Text>
       
@@ -222,19 +226,19 @@ function GitHubScreen() {
 
       {/* Real-time API Stats */}
       <group position={[-0.3, TY, 0.25]}>
-        <Text fontSize={0.12} color="#ffffff" position={[0, 0, 0]} rotation={R as any} anchorX="center">
+        <Text font={SANS} fontSize={0.12} color="#ffffff" position={[0, 0, 0]} rotation={R as any} anchorX="center">
           {data ? data.public_repos : '-'}
         </Text>
-        <Text fontSize={0.05} color="#8b949e" position={[0, 0, 0.1]} rotation={R as any} anchorX="center">
+        <Text font={SANS} fontSize={0.05} color="#8b949e" position={[0, 0, 0.1]} rotation={R as any} anchorX="center">
           Repositories
         </Text>
       </group>
 
       <group position={[0.3, TY, 0.25]}>
-        <Text fontSize={0.12} color="#ffffff" position={[0, 0, 0]} rotation={R as any} anchorX="center">
+        <Text font={SANS} fontSize={0.12} color="#ffffff" position={[0, 0, 0]} rotation={R as any} anchorX="center">
           {data ? data.followers : '-'}
         </Text>
-        <Text fontSize={0.05} color="#8b949e" position={[0, 0, 0.1]} rotation={R as any} anchorX="center">
+        <Text font={SANS} fontSize={0.05} color="#8b949e" position={[0, 0, 0.1]} rotation={R as any} anchorX="center">
           Followers
         </Text>
       </group>
@@ -245,7 +249,7 @@ function GitHubScreen() {
       </mesh>
       
       {data?.bio && (
-        <Text fontSize={0.055} color="#c9d1d9" maxWidth={1.1} position={[0, TY, 0.6]} rotation={R as any} anchorX="center" textAlign="center" lineHeight={1.4}>
+        <Text font={SANS} fontSize={0.055} color="#c9d1d9" maxWidth={1.1} position={[0, TY, 0.6]} rotation={R as any} anchorX="center" textAlign="center" lineHeight={1.4}>
           {data.bio}
         </Text>
       )}
@@ -492,7 +496,7 @@ function SpotifyScreen({ spotifyData, spotifyDataRef, openApp }: any) {
       <AppBackground color="#121212" />
 
       {/* Header */}
-      <Text fontSize={0.045} color="#ffffff" position={[0, TY, -1.0]} rotation={R as any} anchorX="center" fontWeight="bold">
+      <Text font={SANS_BOLD} fontSize={0.045} color="#ffffff" position={[0, TY, -1.0]} rotation={R as any} anchorX="center">
         {spotifyData ? truncate(spotifyData.album, 35) : ''}
       </Text>
 
@@ -511,10 +515,10 @@ function SpotifyScreen({ spotifyData, spotifyDataRef, openApp }: any) {
       </mesh>
 
       {/* Song Info */}
-      <Text fontSize={0.075} color="#ffffff" position={[-0.5, TY, 0.33]} rotation={R as any} anchorX="left" anchorY="top" fontWeight="bold">
+      <Text font={SANS_BOLD} fontSize={0.075} color="#ffffff" position={[-0.5, TY, 0.33]} rotation={R as any} anchorX="left" anchorY="top">
         {spotifyData ? truncate(spotifyData.song, 22) : ''}
       </Text>
-      <Text fontSize={0.05} color="#b3b3b3" position={[-0.5, TY, 0.58]} rotation={R as any} anchorX="left" anchorY="top">
+      <Text font={SANS} fontSize={0.05} color="#b3b3b3" position={[-0.5, TY, 0.58]} rotation={R as any} anchorX="left" anchorY="top">
         {spotifyData ? truncate(spotifyData.artist, 32) : ''}
       </Text>
 
@@ -531,10 +535,10 @@ function SpotifyScreen({ spotifyData, spotifyDataRef, openApp }: any) {
       </mesh>
 
       {/* Timestamps */}
-      <Text ref={timeTextRef} fontSize={0.035} color="#b3b3b3" position={[-0.5, TY, 0.82]} rotation={R as any} anchorX="left">
+      <Text font={SANS} ref={timeTextRef} fontSize={0.035} color="#b3b3b3" position={[-0.5, TY, 0.82]} rotation={R as any} anchorX="left">
         0:00
       </Text>
-      <Text ref={totalTextRef} fontSize={0.04} color="#b3b3b3" position={[0.5, TY, 0.85]} rotation={R as any} anchorX="right" anchorY="top">
+      <Text font={SANS} ref={totalTextRef} fontSize={0.04} color="#b3b3b3" position={[0.5, TY, 0.85]} rotation={R as any} anchorX="right" anchorY="top">
         0:00
       </Text>
 
@@ -554,7 +558,7 @@ function SpotifyScreen({ spotifyData, spotifyDataRef, openApp }: any) {
             <shapeGeometry args={[SPOTIFY_BTN_SHAPE]} />
             <meshBasicMaterial color="#1db954" />
           </mesh>
-          <Text fontSize={0.045} color="#000000" position={[0, 0, 0.005]} anchorX="center" anchorY="middle" fontWeight="bold">
+          <Text font={SANS_BOLD} fontSize={0.045} color="#000000" position={[0, 0, 0.005]} anchorX="center" anchorY="middle">
             OPEN IN SPOTIFY
           </Text>
         </group>
