@@ -7,6 +7,23 @@ import { useFrame, ThreeEvent } from '@react-three/fiber';
 import { useFocus } from '@/context/FocusContext';
 import { useRest } from '@/context/DeskLayout';
 
+// Deterministic PRNG so the pixel pattern is identical on every load
+function mulberry32(seed: number) {
+  return () => {
+    seed |= 0; seed = (seed + 0x6d2b79f5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+// Bare Bones palette, shaded per pixel like a real 16×16 block texture
+const GRASS = ['#4f7b29', '#5c8e32', '#5c8e32', '#669c38', '#72a93f'];
+const DIRT = ['#5e3e25', '#68452a', '#7a5435', '#7a5435', '#8b603d'];
+const GRASS_SHADOW = '#3e631e';
+// Grass overhang depth per column on the side faces
+const DRIP = [3, 4, 5, 5, 4, 3, 3, 4, 5, 6, 6, 5, 4, 3, 3, 3];
+
 function createBareBonesTexture(type: 'top' | 'side' | 'bottom') {
   if (typeof document === 'undefined') return null;
   const size = 16;
@@ -16,76 +33,34 @@ function createBareBonesTexture(type: 'top' | 'side' | 'bottom') {
   const ctx = canvas.getContext('2d');
   if (!ctx) return null;
 
-  // Bare Bones clean palette
-  const GRASS_BASE = '#5c8e32';
-  const GRASS_LIGHT = '#669c38';
-  const GRASS_DARK = '#4f7b29';
-  const GRASS_SHADOW = '#3e631e';
+  const rand = mulberry32(type === 'top' ? 11 : type === 'side' ? 23 : 37);
+  // Mostly mid tones, occasional highlights/shadows
+  const pick = (shades: string[]) => {
+    const r = rand();
+    return shades[r < 0.1 ? 0 : r < 0.3 ? 1 : r < 0.75 ? 2 : r < 0.93 ? 3 : 4];
+  };
 
-  const DIRT_BASE = '#7a5435';
-  const DIRT_LIGHT = '#8b603d';
-  const DIRT_DARK = '#68452a';
-
-  if (type === 'top') {
-    // Solid clean grass with very few minimalist block patches
-    ctx.fillStyle = GRASS_BASE;
-    ctx.fillRect(0, 0, size, size);
-
-    // Subtle clean geometric patches
-    ctx.fillStyle = GRASS_LIGHT;
-    ctx.fillRect(2, 2, 4, 3);
-    ctx.fillRect(10, 8, 3, 4);
-
-    ctx.fillStyle = GRASS_DARK;
-    ctx.fillRect(8, 2, 3, 2);
-    ctx.fillRect(3, 11, 4, 2);
-  } else if (type === 'bottom') {
-    // Clean dirt
-    ctx.fillStyle = DIRT_BASE;
-    ctx.fillRect(0, 0, size, size);
-
-    ctx.fillStyle = DIRT_LIGHT;
-    ctx.fillRect(3, 4, 3, 3);
-    ctx.fillRect(10, 10, 2, 3);
-
-    ctx.fillStyle = DIRT_DARK;
-    ctx.fillRect(9, 2, 3, 2);
-    ctx.fillRect(2, 11, 3, 2);
-  } else {
-    // Side: clean dirt base
-    ctx.fillStyle = DIRT_BASE;
-    ctx.fillRect(0, 0, size, size);
-
-    // Minimal dirt accents
-    ctx.fillStyle = DIRT_LIGHT;
-    ctx.fillRect(4, 9, 3, 2);
-    ctx.fillRect(11, 12, 2, 2);
-
-    ctx.fillStyle = DIRT_DARK;
-    ctx.fillRect(2, 12, 2, 2);
-    ctx.fillRect(9, 8, 3, 2);
-
-    // Clean Bare Bones stepped grass overhang
-    const dripHeights = [2, 3, 5, 5, 4, 2, 3, 3, 4, 6, 6, 5, 3, 2, 3, 2];
-
-    // Under-drip 1px subtle shadow
-    ctx.fillStyle = GRASS_SHADOW;
+  for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
-      const h = dripHeights[x];
-      ctx.fillRect(x, h, 1, 1);
+      let color: string;
+      if (type === 'top') color = pick(GRASS);
+      else if (type === 'bottom') color = pick(DIRT);
+      else if (y < DRIP[x]) color = pick(GRASS);
+      else if (y === DRIP[x]) color = GRASS_SHADOW;
+      else color = pick(DIRT);
+      ctx.fillStyle = color;
+      ctx.fillRect(x, y, 1, 1);
     }
+  }
 
-    // Grass fill
-    ctx.fillStyle = GRASS_BASE;
-    for (let x = 0; x < size; x++) {
-      const h = dripHeights[x];
-      ctx.fillRect(x, 0, 1, h);
+  // A few darker pebbles in the dirt
+  if (type !== 'top') {
+    ctx.fillStyle = '#4a311c';
+    for (let n = 0; n < 5; n++) {
+      const x = Math.floor(rand() * 15);
+      const y = 8 + Math.floor(rand() * 7);
+      ctx.fillRect(x, y, 2, 1);
     }
-
-    // Top grass subtle highlight patches
-    ctx.fillStyle = GRASS_LIGHT;
-    ctx.fillRect(2, 0, 3, 2);
-    ctx.fillRect(9, 0, 3, 2);
   }
 
   const tex = new THREE.CanvasTexture(canvas);

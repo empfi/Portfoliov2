@@ -4,6 +4,25 @@ import React from 'react';
 import { useSpring, animated } from '@react-spring/three';
 import { RoundedBox, Text } from '@react-three/drei';
 import { useFocus } from '@/context/FocusContext';
+import { PageEdges } from './PageEdges';
+
+/** Thin gilt rectangle inset on a book cover (cover top surface at y = 0.02) */
+function CoverBorder({ color }: { color: string }) {
+  const w = 2.15, d = 3.15, t = 0.022;
+  const bars: [number, number, number, number][] = [
+    [0, -d / 2, w, t], [0, d / 2, w, t], [-w / 2, 0, t, d], [w / 2, 0, t, d],
+  ];
+  return (
+    <group position={[1.3, 0.022, 0]}>
+      {bars.map(([x, z, bw, bd]) => (
+        <mesh key={`${x},${z}`} position={[x, 0, z]}>
+          <boxGeometry args={[bw, 0.004, bd]} />
+          <meshStandardMaterial color={color} metalness={1} roughness={0.3} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
 import { useRest } from '@/context/DeskLayout';
 
 function LeftPageText({ visible }: { visible: boolean }) {
@@ -101,6 +120,7 @@ export function AnimatedBook() {
         castShadow receiveShadow onClick={toggle} onPointerOver={over} onPointerOut={out}>
         <meshStandardMaterial color="#fefefe" roughness={1} />
       </RoundedBox>
+      <PageEdges w={2.5} h={0.1} d={3.4} position={[0.05, 0.05, 0]} />
 
       <RoundedBox args={[0.2, 0.28, 3.5]} position={[-1.25, 0.1, 0]} radius={0.05} smoothness={4}
         castShadow receiveShadow onClick={toggle} onPointerOver={over} onPointerOut={out}>
@@ -119,6 +139,7 @@ export function AnimatedBook() {
           <meshStandardMaterial color="#3b82f6" roughness={0.7} />
         </RoundedBox>
 
+        <CoverBorder color="#d4af37" />
         {/* Front Cover Title */}
         <Text font="/fonts/caveat.woff" fontSize={0.5} color="#172554" position={[1.25, 0.025, -1.0]} rotation={[-Math.PI / 2, 0, 0]} anchorX="center" anchorY="middle">
           Journal
@@ -128,6 +149,7 @@ export function AnimatedBook() {
           castShadow receiveShadow onClick={toggle} onPointerOver={over} onPointerOut={out}>
           <meshStandardMaterial color="#fefefe" roughness={1} />
         </RoundedBox>
+        <PageEdges w={2.45} h={0.1} d={3.4} position={[1.25, -0.07, 0]} />
 
         <LeftPageText visible={isOpen} />
       </animated.group>

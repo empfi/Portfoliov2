@@ -729,6 +729,12 @@ export function Smartphone() {
       <mesh geometry={chassisGeom} castShadow receiveShadow>
         <meshStandardMaterial color="#1f1f1f" roughness={0.3} metalness={0.9} />
       </mesh>
+      {/* Side buttons: action + volume on the left, power on the right */}
+      {([[-0.712, -0.88, 0.09], [-0.712, -0.66, 0.16], [-0.712, -0.44, 0.16], [0.712, -0.55, 0.24]] as const).map(([x, z, len]) => (
+        <RoundedBox key={`${x}${z}`} args={[0.02, 0.028, len]} radius={0.008} smoothness={2} position={[x, -0.032, z]}>
+          <meshStandardMaterial color="#2a2a2c" roughness={0.3} metalness={0.9} />
+        </RoundedBox>
+      ))}
 
       {/* Screen Base (Wallpaper) */}
       <mesh position={[0, TOP, 0]} rotation={R as any}>
