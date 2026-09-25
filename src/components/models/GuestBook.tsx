@@ -25,9 +25,11 @@ function CoverBorder({ color }: { color: string }) {
 }
 import { useRest } from '@/context/DeskLayout';
 import { useTurnstile } from '@/context/TurnstileContext';
+import { draft, useDraft, MAX_CHARS } from '@/context/GuestbookDraft';
 
 const FONT = '/fonts/caveat.woff';
-const MAX_CHARS = 100;
+
+const setTyped = draft.setText;
 
 export function GuestBook() {
   const { focusedItem, setFocusedItem } = useFocus();
@@ -35,9 +37,8 @@ export function GuestBook() {
   const isOpen = focusedItem === 'guestbook';
   const rest = useRest('guestbook');
 
-  const [typed, setTyped]             = useState('');
+  const { text: typed } = useDraft();
   const [cursor, setCursor]           = useState(true);
-  const [loading, setLoading]         = useState(false);
   const [pageCache, setPageCache]     = useState<Record<number, any[]>>({});
   const [totalPages, setTotalPages]   = useState(1);
   const [spread, setSpread]           = useState(0);
@@ -49,10 +50,6 @@ export function GuestBook() {
 
   const inputRef = React.useRef<any>(null);
   const entryRefs = React.useRef<Record<string, any>>({});
-  // Real, invisible DOM input laid over the write-in line. Mobile browsers only
-  // raise the on-screen keyboard for a genuine tap on a focusable form element —
-  // the window 'keydown' listener below only ever sees a physical keyboard.
-  const hiddenInputRef = React.useRef<HTMLInputElement>(null);
 
   // Robust line measurement fallback for Troika 3D Text
   const measureLines = (mesh: any, currentLc: number) => {
@@ -115,12 +112,8 @@ export function GuestBook() {
   useEffect(() => {
     if (!isOpen) return;
     const onKey = (e: KeyboardEvent) => {
-      // The hidden mobile input (below) already handles its own typing via
-      // native onChange — don't double-apply the same keystroke here.
-      if (document.activeElement === hiddenInputRef.current) {
-        if (e.key === 'Escape') setFocusedItem(null);
-        return;
-      }
+      // Typing into a real field (the mobile composer) is handled by that field
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
 
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a') {
         e.preventDefault();
@@ -163,27 +156,29 @@ export function GuestBook() {
     return () => window.removeEventListener('keydown', onKey);
   }, [isOpen, typed, selectedAll]);
 
-  /* ── mobile keyboard: focus the hidden input once the guestbook opens ── */
-  useEffect(() => {
-    if (isOpen && spread === 0) {
-      // Best-effort; iOS/Android will only actually raise the keyboard once the
-      // user taps the (invisible) input directly, which the Html overlay below covers.
-      hiddenInputRef.current?.focus({ preventScroll: true });
-    } else if (!isOpen) {
-      hiddenInputRef.current?.blur();
-    }
-  }, [isOpen, spread]);
-
   const submitText = async (text: string) => {
-    if (!text.trim() || loading) return;
-    setLoading(true);
-    await fetch('/api/guestbook', {
-      method: 'POST',
-      body: JSON.stringify({ name: 'Anonymous', message: text.trim(), token: turnstileToken }),
-      headers: { 'Content-Type': 'application/json' }
-    });
+    if (!text.trim() || draft.get().sending) return;
+    draft.setSending(true);
+    try {
+      const res = await fetch('/api/guestbook', {
+        method: 'POST',
+        body: JSON.stringify({ name: 'Anonymous', message: text.trim(), token: turnstileToken }),
+        headers: { 'Content-Type': 'application/json' }
+      });
+      if (!res.ok) {
+        // Keep the draft so nothing typed is lost; the server says why (e.g. daily limit)
+        const data = await res.json().catch(() => ({}));
+        draft.setStatus(data.error || 'Could not sign the guestbook, please try again.');
+        return;
+      }
+    } catch {
+      draft.setStatus('Network error, please try again.');
+      return;
+    } finally {
+      draft.setSending(false);
+    }
     setTyped('');
-    setLoading(false);
+    draft.setStatus('Thanks for signing!');
     
     // Invalidate cache and jump back to page 1 to see the new entry
     setPageCache({});
@@ -191,6 +186,14 @@ export function GuestBook() {
     fetchPage(1);
     window.dispatchEvent(new CustomEvent('guestbook-updated'));
   };
+
+  // The mobile composer asks us to submit (we own the Turnstile token and page cache)
+  useEffect(() => {
+    if (!isOpen) return;
+    const onSubmit = () => submitText(draft.get().text);
+    window.addEventListener('guestbook-submit', onSubmit);
+    return () => window.removeEventListener('guestbook-submit', onSubmit);
+  });
 
   /* ── per-spread layout from current page cache ── */
   const PAGE_BOTTOM = -1.15;
@@ -371,52 +374,6 @@ export function GuestBook() {
             </mesh>
           ))}
 
-          {/* Invisible tap target over the write-in line. Real <input> elements are
-              the only thing mobile browsers will raise the on-screen keyboard for —
-              a bare window keydown listener (above) never sees soft-keyboard input. */}
-          {isOpen && isFirstSpread && (
-            <Html transform distanceFactor={1.5} position={[0, inputY - 0.35, 0.02]} style={{ pointerEvents: 'auto' }}>
-              <input
-                ref={hiddenInputRef}
-                type="text"
-                inputMode="text"
-                enterKeyHint="send"
-                autoComplete="off"
-                autoCorrect="off"
-                autoCapitalize="sentences"
-                spellCheck={false}
-                maxLength={MAX_CHARS}
-                value={typed}
-                onChange={(e) => setTyped(e.target.value.slice(0, MAX_CHARS))}
-                onSelect={(e) => {
-                  const el = e.currentTarget;
-                  setSelectedAll(el.value.length > 0 && el.selectionStart === 0 && el.selectionEnd === el.value.length);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    submitText(typed);
-                  } else if (e.key === 'Escape') {
-                    e.preventDefault();
-                    setFocusedItem(null);
-                  }
-                }}
-                onPointerDown={(e) => e.stopPropagation()}
-                onClick={(e) => e.stopPropagation()}
-                style={{
-                  width: '320px',
-                  height: '160px',
-                  border: 'none',
-                  outline: 'none',
-                  background: 'transparent',
-                  color: 'transparent',
-                  caretColor: 'transparent',
-                  fontSize: '16px', // keeps iOS Safari from auto-zooming on focus
-                  padding: 0,
-                }}
-              />
-            </Html>
-          )}
 
 
           {/* Existing messages */}

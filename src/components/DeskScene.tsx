@@ -8,6 +8,7 @@ import { useSpring, animated } from '@react-spring/three';
 import { FocusProvider, useFocus } from '@/context/FocusContext';
 import { TurnstileProvider, useTurnstile } from '@/context/TurnstileContext';
 import RouteSync from './RouteSync';
+import GuestbookComposer from './GuestbookComposer';
 import { CONTENT, usePortrait } from '@/context/DeskLayout';
 import { TexturedDesk } from './models/TexturedDesk';
 import { MinecraftBlock } from './models/MinecraftBlock';
@@ -228,7 +229,12 @@ function CameraRig() {
 
 export default function DeskScene() {
   const portrait = usePortrait();
-  const [dpr, setDpr] = React.useState(() => (typeof window === 'undefined' ? 1 : Math.min(window.devicePixelRatio, 2)));
+  // Render at the screen's native density (3x on most phones) so nothing looks soft. If
+  // frames drop we step down, but never below 2x (or native, if lower): below that text
+  // and edges visibly blur on phones.
+  const nativeDpr = typeof window === 'undefined' ? 1 : Math.min(window.devicePixelRatio, 3);
+  const minDpr = Math.min(nativeDpr, 2);
+  const [dpr, setDpr] = React.useState(nativeDpr);
   return (
     <TurnstileProvider>
       <div style={{
@@ -244,8 +250,7 @@ export default function DeskScene() {
           {/* Invisible Turnstile widget — outside Canvas, no R3F conflict */}
           <TurnstileWidget />
           <Canvas shadows dpr={dpr} gl={{ powerPreference: 'high-performance' }}>
-            {/* Start at full device sharpness; only step the pixel ratio down if frames actually drop */}
-            <PerformanceMonitor onDecline={() => setDpr((d) => Math.max(1, d - 0.5))} flipflops={3} onFallback={() => setDpr(1)} />
+            <PerformanceMonitor onDecline={() => setDpr((d) => Math.max(minDpr, d - 0.5))} onIncline={() => setDpr((d) => Math.min(nativeDpr, d + 0.5))} flipflops={3} onFallback={() => setDpr(minDpr)} />
             <BackgroundClicker />
             <CameraRig />
             <SceneLighting />
@@ -276,6 +281,7 @@ export default function DeskScene() {
             </Suspense>
           </Canvas>
           <ProjectOverlay />
+          <GuestbookComposer />
         </FocusProvider>
       </div>
     </TurnstileProvider>

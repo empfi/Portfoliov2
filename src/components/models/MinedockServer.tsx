@@ -9,11 +9,14 @@ import { useCursor, RoundedBox } from '@react-three/drei';
 
 function canvasTexture(w: number, h: number, draw: (ctx: CanvasRenderingContext2D) => void) {
   if (typeof document === 'undefined') return null;
+  // Drawn at 4x so labels stay crisp when the item is held up to the camera
+  const scale = 4;
   const canvas = document.createElement('canvas');
-  canvas.width = w;
-  canvas.height = h;
+  canvas.width = w * scale;
+  canvas.height = h * scale;
   const ctx = canvas.getContext('2d');
   if (!ctx) return null;
+  ctx.scale(scale, scale);
   draw(ctx);
   const tex = new THREE.CanvasTexture(canvas);
   tex.colorSpace = THREE.SRGBColorSpace;
