@@ -203,6 +203,40 @@ function ContactScreen() {
   );
 }
 
+// 20×7 simulated contribution grid as a single instanced draw call (was 140 meshes,
+// re-randomised on every render)
+const GRAPH_COLS = 20;
+const GRAPH_ROWS = 7;
+const GRAPH_COLORS = ['#161b22', '#0e4429', '#006d32', '#26a641', '#39d353'];
+const GRAPH_CELL = new THREE.PlaneGeometry(0.04, 0.04);
+
+function ContributionGraph() {
+  const ref = useRef<THREE.InstancedMesh>(null);
+  useEffect(() => {
+    const mesh = ref.current;
+    if (!mesh) return;
+    const m = new THREE.Matrix4();
+    const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(...R));
+    const one = new THREE.Vector3(1, 1, 1);
+    const color = new THREE.Color();
+    for (let col = 0; col < GRAPH_COLS; col++) {
+      for (let row = 0; row < GRAPH_ROWS; row++) {
+        const i = col * GRAPH_ROWS + row;
+        const level = Math.random() > 0.6 ? Math.floor(Math.random() * 4) + 1 : 0;
+        mesh.setMatrixAt(i, m.compose(new THREE.Vector3(col * 0.052, 0, row * 0.052), q, one));
+        mesh.setColorAt(i, color.set(GRAPH_COLORS[level]));
+      }
+    }
+    mesh.instanceMatrix.needsUpdate = true;
+    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+  }, []);
+  return (
+    <instancedMesh ref={ref} args={[GRAPH_CELL, undefined, GRAPH_COLS * GRAPH_ROWS]} position={[-0.5, TY, 0.85]}>
+      <meshBasicMaterial />
+    </instancedMesh>
+  );
+}
+
 function GitHubScreen() {
   const [data, setData] = useState<any>(null);
   const [avatarTex, setAvatarTex] = useState<THREE.Texture | null>(null);
@@ -275,23 +309,7 @@ function GitHubScreen() {
       )}
 
       {/* Simulated Contribution Graph */}
-      <group position={[-0.5, TY, 0.85]}>
-        {Array.from({ length: 20 }).map((_, col) => (
-          Array.from({ length: 7 }).map((_, row) => {
-            // Generate some fake activity data
-            const activityLevel = Math.random() > 0.6 ? Math.floor(Math.random() * 4) + 1 : 0;
-            const colors = ['#161b22', '#0e4429', '#006d32', '#26a641', '#39d353'];
-            const color = colors[activityLevel];
-            
-            return (
-              <mesh key={`${col}-${row}`} position={[col * 0.052, 0, row * 0.052]} rotation={R as any}>
-                <planeGeometry args={[0.04, 0.04]} />
-                <meshBasicMaterial color={color} />
-              </mesh>
-            );
-          })
-        ))}
-      </group>
+      <ContributionGraph />
     </group>
   );
 }

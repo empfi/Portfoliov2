@@ -203,10 +203,12 @@ export default function MysteryBox() {
   });
 
   const goldMaterial = <meshStandardMaterial color="#ffd700" metalness={0.8} roughness={0.2} />;
+  // Transmission makes three re-render the whole scene into an extra target every frame
+  // while it's on screen, so only pay for it when the box is held up close.
   const purpleGlassMaterial = (
     <meshPhysicalMaterial 
       color="#b829ff" 
-      transmission={0.4} 
+      transmission={isFocused ? 0.4 : 0} 
       opacity={0.9} 
       transparent 
       roughness={0.1} 
@@ -304,7 +306,7 @@ export default function MysteryBox() {
           </animated.group>
 
           {/* Floating Reward Relic */}
-          <animated.group position-y={gemY} scale={gemScale}>
+          <animated.group position-y={gemY} scale={gemScale} visible={opened}>
             <group>
               {/* The Ruby */}
               <Octahedron ref={rubyRef} args={[0.15, 0]}>

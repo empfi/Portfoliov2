@@ -3,7 +3,7 @@
 import React, { useRef, useEffect, Suspense } from 'react';
 import { Turnstile } from '@marsidev/react-turnstile';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { ContactShadows, Environment, Lightformer, PerspectiveCamera, useTexture } from '@react-three/drei';
+import { ContactShadows, Environment, Lightformer, PerformanceMonitor, PerspectiveCamera, useTexture } from '@react-three/drei';
 import { useSpring, animated } from '@react-spring/three';
 import { FocusProvider, useFocus } from '@/context/FocusContext';
 import { TurnstileProvider, useTurnstile } from '@/context/TurnstileContext';
@@ -228,6 +228,7 @@ function CameraRig() {
 
 export default function DeskScene() {
   const portrait = usePortrait();
+  const [dpr, setDpr] = React.useState(() => (typeof window === 'undefined' ? 1 : Math.min(window.devicePixelRatio, 2)));
   return (
     <TurnstileProvider>
       <div style={{
@@ -242,7 +243,9 @@ export default function DeskScene() {
           <KeyboardControls />
           {/* Invisible Turnstile widget — outside Canvas, no R3F conflict */}
           <TurnstileWidget />
-          <Canvas shadows>
+          <Canvas shadows dpr={dpr} gl={{ powerPreference: 'high-performance' }}>
+            {/* Start at full device sharpness; only step the pixel ratio down if frames actually drop */}
+            <PerformanceMonitor onDecline={() => setDpr((d) => Math.max(1, d - 0.5))} flipflops={3} onFallback={() => setDpr(1)} />
             <BackgroundClicker />
             <CameraRig />
             <SceneLighting />
@@ -269,7 +272,7 @@ export default function DeskScene() {
               <Polaroid id="polaroid_2" caption="Coming soon" />
               <Polaroid id="polaroid_3" caption="Coming soon" />
 
-              <ContactShadows position={[0, 0.05, 0]} opacity={0.8} scale={15} blur={2} far={2} resolution={1024} color="#000000" />
+              <ContactShadows position={[0, 0.05, 0]} opacity={0.8} scale={15} blur={2} far={2} resolution={512} color="#000000" />
             </Suspense>
           </Canvas>
           <ProjectOverlay />
