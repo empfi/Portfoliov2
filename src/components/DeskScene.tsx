@@ -3,13 +3,14 @@
 import React, { useRef, useEffect, Suspense } from 'react';
 import { Turnstile } from '@marsidev/react-turnstile';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { ContactShadows, Environment, Lightformer, PerspectiveCamera, useTexture } from '@react-three/drei';
+import { Environment, Lightformer, PerspectiveCamera, useTexture } from '@react-three/drei';
 import { useSpring, animated } from '@react-spring/three';
 import { FocusProvider, useFocus } from '@/context/FocusContext';
 import { TurnstileProvider, useTurnstile } from '@/context/TurnstileContext';
 import RouteSync from './RouteSync';
 import GuestbookComposer from './GuestbookComposer';
 import { CONTENT, usePortrait } from '@/context/DeskLayout';
+import { DeskShadows } from './models/DeskShadows';
 import { TexturedDesk } from './models/TexturedDesk';
 import { MinecraftBlock } from './models/MinecraftBlock';
 import { AnimatedBook } from './models/AnimatedBook';
@@ -247,7 +248,7 @@ export default function DeskScene() {
           <KeyboardControls />
           {/* Invisible Turnstile widget — outside Canvas, no R3F conflict */}
           <TurnstileWidget />
-          <Canvas shadows dpr={dpr} gl={{ powerPreference: 'high-performance' }}>
+          <Canvas shadows dpr={dpr} gl={{ powerPreference: 'high-performance', antialias: false }}>
             <BackgroundClicker />
             <CameraRig />
             <SceneLighting />
@@ -274,7 +275,7 @@ export default function DeskScene() {
               <Polaroid id="polaroid_2" caption="Coming soon" />
               <Polaroid id="polaroid_3" caption="Coming soon" />
 
-              <ContactShadows position={[0, 0.05, 0]} opacity={0.8} scale={15} blur={2} far={2} resolution={512} color="#000000" />
+              <DeskShadows />
             </Suspense>
           </Canvas>
           <ProjectOverlay />

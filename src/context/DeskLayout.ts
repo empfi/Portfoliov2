@@ -9,7 +9,7 @@ export type Rest = { pos: Vec3; rot: Vec3 };
 // re-flows the same items into a tall grid (desk turned 90°) so phones see everything
 // upright — held/inspection poses are shared, so nothing has to rotate when you pick
 // something up.
-const LANDSCAPE: Record<string, Rest> = {
+export const LANDSCAPE: Record<string, Rest> = {
   hyperplex:  { pos: [1.5, 0.25, -1.0],   rot: [0, Math.PI / 4, 0] },
   luakey:     { pos: [0.5, 0.05, -1.5],   rot: [Math.PI / 2, 0, -0.4] },
   minedock:   { pos: [2.2, 0.45, -2.8],   rot: [0, -0.4, 0] },
@@ -24,7 +24,7 @@ const LANDSCAPE: Record<string, Rest> = {
   polaroid_3: { pos: [0.8, 0.02, 2.8],    rot: [0, -0.1, 0] },
 };
 
-const PORTRAIT: Record<string, Rest> = {
+export const PORTRAIT: Record<string, Rest> = {
   minedock:   { pos: [-2.1, 0.45, -5.4],  rot: [0, 0.3, 0] },
   mysterybox: { pos: [0.1, 0, -5.5],      rot: [0, 0, 0] },
   bloxvault:  { pos: [2.2, 0.4, -5.3],    rot: [0, -0.3, 0] },
