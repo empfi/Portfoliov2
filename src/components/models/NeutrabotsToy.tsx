@@ -165,28 +165,6 @@ export function NeutrabotsToy() {
           </mesh>
         ))}
 
-        {/* Headset: ear cups (outer face is local -y after the ±90° roll) joined by a band */}
-        {[-1, 1].map((side) => (
-          <group key={side} position={[side * 0.265, 0, 0]} rotation={[0, 0, side * Math.PI / 2]}>
-            <mesh>
-              <cylinderGeometry args={[0.1, 0.1, 0.05, 32]} />
-              <meshStandardMaterial color="#2a2d34" metalness={0.6} roughness={0.35} />
-            </mesh>
-            <mesh position={[0, -0.027, 0]} rotation={[Math.PI / 2, 0, 0]}>
-              <torusGeometry args={[0.072, 0.008, 8, 32]} />
-              <meshStandardMaterial color="#5865f2" emissive="#5865f2" emissiveIntensity={2} />
-            </mesh>
-            <mesh position={[0, -0.028, 0]}>
-              <cylinderGeometry args={[0.05, 0.05, 0.006, 24]} />
-              <meshStandardMaterial color="#3a3e47" metalness={0.8} roughness={0.25} />
-            </mesh>
-          </group>
-        ))}
-        <mesh position={[0, 0, -0.06]}>
-          <torusGeometry args={[0.285, 0.02, 10, 48, Math.PI]} />
-          <meshStandardMaterial color="#2a2d34" metalness={0.6} roughness={0.35} />
-        </mesh>
-
         {/* Antenna: base, segmented mast, pulsing tip */}
         <group position={[0, 0.24, 0.07]}>
           <mesh>
