@@ -3,7 +3,7 @@
 import React, { useRef, useEffect, Suspense } from 'react';
 import { Turnstile } from '@marsidev/react-turnstile';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { ContactShadows, Environment, Lightformer, PerformanceMonitor, PerspectiveCamera, useTexture } from '@react-three/drei';
+import { ContactShadows, Environment, Lightformer, PerspectiveCamera, useTexture } from '@react-three/drei';
 import { useSpring, animated } from '@react-spring/three';
 import { FocusProvider, useFocus } from '@/context/FocusContext';
 import { TurnstileProvider, useTurnstile } from '@/context/TurnstileContext';
@@ -229,12 +229,10 @@ function CameraRig() {
 
 export default function DeskScene() {
   const portrait = usePortrait();
-  // Render at the screen's native density (3x on most phones) so nothing looks soft. If
-  // frames drop we step down, but never below 2x (or native, if lower): below that text
-  // and edges visibly blur on phones.
-  const nativeDpr = typeof window === 'undefined' ? 1 : Math.min(window.devicePixelRatio, 3);
-  const minDpr = Math.min(nativeDpr, 2);
-  const [dpr, setDpr] = React.useState(nativeDpr);
+  // Fixed at the screen's native density (3x on most phones). Deliberately not adaptive:
+  // stepping resolution down when frames dip (e.g. once a phone warms up and throttles)
+  // made the whole page visibly go soft mid-visit.
+  const [dpr] = React.useState(() => (typeof window === 'undefined' ? 1 : Math.min(window.devicePixelRatio, 3)));
   return (
     <TurnstileProvider>
       <div style={{
@@ -250,7 +248,6 @@ export default function DeskScene() {
           {/* Invisible Turnstile widget — outside Canvas, no R3F conflict */}
           <TurnstileWidget />
           <Canvas shadows dpr={dpr} gl={{ powerPreference: 'high-performance' }}>
-            <PerformanceMonitor onDecline={() => setDpr((d) => Math.max(minDpr, d - 0.5))} onIncline={() => setDpr((d) => Math.min(nativeDpr, d + 0.5))} flipflops={3} onFallback={() => setDpr(minDpr)} />
             <BackgroundClicker />
             <CameraRig />
             <SceneLighting />
