@@ -1,5 +1,5 @@
 "use client";
-import React, { useRef, useEffect, useMemo } from 'react';
+import React, { useLayoutEffect, useRef, useEffect, useMemo } from 'react';
 import * as THREE from 'three';
 import { useSpring, animated } from '@react-spring/three';
 import { useFrame, ThreeEvent } from '@react-three/fiber';
@@ -71,7 +71,59 @@ function createLcdTexture() {
 }
 
 const SLED_Y = [0.17, 0.02, -0.13, -0.28];
-const FAN_BLADES = [0, 1, 2, 3, 4].map((i) => (i / 5) * Math.PI * 2);
+const FAN_BLADE_ANGLES = [0, 1, 2, 3, 4].map((i) => (i / 5) * Math.PI * 2);
+
+const dummyMat = new THREE.Matrix4();
+const dummyPos = new THREE.Vector3();
+const dummyQuat = new THREE.Quaternion();
+const dummyEuler = new THREE.Euler();
+const dummyScale = new THREE.Vector3(1, 1, 1);
+
+/** One fan's blades as a single instanced draw call instead of five separate meshes. */
+function FanBlades() {
+  const ref = useRef<THREE.InstancedMesh>(null);
+  useLayoutEffect(() => {
+    const mesh = ref.current;
+    if (!mesh) return;
+    FAN_BLADE_ANGLES.forEach((a, i) => {
+      dummyPos.set(Math.cos(a) * 0.07, Math.sin(a) * 0.07, 0);
+      dummyEuler.set(0.5, 0, a, 'ZYX');
+      dummyQuat.setFromEuler(dummyEuler);
+      dummyMat.compose(dummyPos, dummyQuat, dummyScale);
+      mesh.setMatrixAt(i, dummyMat);
+    });
+    mesh.instanceMatrix.needsUpdate = true;
+  }, []);
+  return (
+    <instancedMesh ref={ref} args={[undefined, undefined, FAN_BLADE_ANGLES.length]}>
+      <boxGeometry args={[0.075, 0.035, 0.004]} />
+      <meshStandardMaterial color="#26282d" />
+    </instancedMesh>
+  );
+}
+
+/** Small, identical, position-only decorations as one instanced draw call. */
+function InstancedDots({ positions, geometry, material }: {
+  positions: readonly (readonly [number, number, number])[]; geometry: React.ReactNode; material: React.ReactNode;
+}) {
+  const ref = useRef<THREE.InstancedMesh>(null);
+  useLayoutEffect(() => {
+    const mesh = ref.current;
+    if (!mesh) return;
+    positions.forEach(([x, y, z], i) => {
+      dummyPos.set(x, y, z);
+      dummyMat.compose(dummyPos, dummyQuat.identity(), dummyScale);
+      mesh.setMatrixAt(i, dummyMat);
+    });
+    mesh.instanceMatrix.needsUpdate = true;
+  }, [positions]);
+  return (
+    <instancedMesh ref={ref} args={[undefined, undefined, positions.length]}>
+      {geometry}
+      {material}
+    </instancedMesh>
+  );
+}
 
 export function MinedockServer() {
   const { focusedItem, setFocusedItem } = useFocus();
@@ -306,12 +358,7 @@ export function MinedockServer() {
               <cylinderGeometry args={[0.035, 0.035, 0.02, 16]} />
               <meshStandardMaterial color="#26282d" />
             </mesh>
-            {FAN_BLADES.map((a) => (
-              <mesh key={a} rotation={[0.5, 0, a, 'ZYX']} position={[Math.cos(a) * 0.07, Math.sin(a) * 0.07, 0]}>
-                <boxGeometry args={[0.075, 0.035, 0.004]} />
-                <meshStandardMaterial color="#26282d" />
-              </mesh>
-            ))}
+            <FanBlades />
           </group>
           {[0.12, 0.08, 0.04].map((r) => (
             <mesh key={r} position={[0, 0, -0.016]}>
@@ -343,12 +390,11 @@ export function MinedockServer() {
       ))}
 
       {/* Rubber feet */}
-      {[[-0.28, -0.28], [0.28, -0.28], [-0.28, 0.28], [0.28, 0.28]].map(([x, z]) => (
-        <mesh key={`${x}${z}`} position={[x, -0.458, z]}>
-          <cylinderGeometry args={[0.04, 0.045, 0.02, 16]} />
-          <meshStandardMaterial color="#111" roughness={0.9} />
-        </mesh>
-      ))}
+      <InstancedDots
+        positions={[[-0.28, -0.458, -0.28], [0.28, -0.458, -0.28], [-0.28, -0.458, 0.28], [0.28, -0.458, 0.28]]}
+        geometry={<cylinderGeometry args={[0.04, 0.045, 0.02, 16]} />}
+        material={<meshStandardMaterial color="#111" roughness={0.9} />}
+      />
     </animated.group>
   );
 }

@@ -1,5 +1,5 @@
 "use client";
-import React, { useRef, useEffect, useMemo } from 'react';
+import React, { useLayoutEffect, useRef, useEffect, useMemo } from 'react';
 import * as THREE from 'three';
 import { useSpring, animated } from '@react-spring/three';
 import { useFrame, ThreeEvent } from '@react-three/fiber';
@@ -85,6 +85,33 @@ const BOLTS: [number, number][] = [-0.19, -0.065, 0.065, 0.19].flatMap((t) => [
 ] as [number, number][]);
 const KEYPAD_KEYS = [0, 1, 2, 3].flatMap((r) => [0, 1, 2].map((c) => [c, r] as const));
 const SPOKES = [0, 1, 2].map((i) => (i / 3) * Math.PI * 2 + Math.PI / 2);
+const FEET: [number, number][] = [[-0.27, -0.27], [0.27, -0.27], [-0.27, 0.27], [0.27, 0.27]];
+
+const dummy = new THREE.Object3D();
+
+/** Small, identical, position-only decorations (bolt heads, keypad buttons, feet) as one
+ *  instanced draw call each, instead of one <mesh> per copy. */
+function InstancedDots({ positions, geometry, material }: {
+  positions: readonly (readonly [number, number, number])[]; geometry: React.ReactNode; material: React.ReactNode;
+}) {
+  const ref = useRef<THREE.InstancedMesh>(null);
+  useLayoutEffect(() => {
+    const mesh = ref.current;
+    if (!mesh) return;
+    positions.forEach(([x, y, z], i) => {
+      dummy.position.set(x, y, z);
+      dummy.updateMatrix();
+      mesh.setMatrixAt(i, dummy.matrix);
+    });
+    mesh.instanceMatrix.needsUpdate = true;
+  }, [positions]);
+  return (
+    <instancedMesh ref={ref} args={[undefined, undefined, positions.length]}>
+      {geometry}
+      {material}
+    </instancedMesh>
+  );
+}
 
 export function BloxvaultSafe() {
   const { focusedItem, setFocusedItem } = useFocus();
@@ -210,12 +237,11 @@ export function BloxvaultSafe() {
       <RoundedBox args={[0.4, 0.4, 0.012]} radius={0.015} smoothness={2} position={[0, 0, 0.385]}>
         <meshStandardMaterial color="#9aa0a9" metalness={0.5} roughness={0.32} />
       </RoundedBox>
-      {BOLTS.map(([x, y]) => (
-        <mesh key={`${x},${y}`} position={[x, y, 0.382]}>
-          <sphereGeometry args={[0.012, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2]} />
-          <meshStandardMaterial color="#d4d7dc" metalness={1} roughness={0.2} />
-        </mesh>
-      ))}
+      <InstancedDots
+        positions={BOLTS.map(([x, y]) => [x, y, 0.382] as const)}
+        geometry={<sphereGeometry args={[0.012, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2]} />}
+        material={<meshStandardMaterial color="#d4d7dc" metalness={1} roughness={0.2} />}
+      />
 
       {/* Hinge barrels */}
       {[0.16, -0.16].map((y) => (
@@ -282,11 +308,11 @@ export function BloxvaultSafe() {
           <planeGeometry args={[0.09, 0.028]} />
           <meshStandardMaterial color="#0b2a14" emissive="#1f7a3a" emissiveIntensity={0.6} />
         </mesh>
-        {KEYPAD_KEYS.map(([c, r]) => (
-          <RoundedBox key={`${c}${r}`} args={[0.024, 0.02, 0.008]} radius={0.004} smoothness={2} position={[(c - 1) * 0.032, 0.03 - r * 0.028, 0.011]}>
-            <meshStandardMaterial color="#9ea2a9" metalness={0.8} roughness={0.3} />
-          </RoundedBox>
-        ))}
+        <InstancedDots
+          positions={KEYPAD_KEYS.map(([c, r]) => [(c - 1) * 0.032, 0.03 - r * 0.028, 0.011] as const)}
+          geometry={<boxGeometry args={[0.024, 0.02, 0.008]} />}
+          material={<meshStandardMaterial color="#9ea2a9" metalness={0.8} roughness={0.3} />}
+        />
         <mesh position={[0.045, 0.087, 0.009]}>
           <circleGeometry args={[0.006, 12]} />
           <meshStandardMaterial ref={statusLed} color="#ff2a2a" emissive="#ff2a2a" emissiveIntensity={2} />
@@ -300,12 +326,11 @@ export function BloxvaultSafe() {
       </mesh>
 
       {/* Feet */}
-      {[[-0.27, -0.27], [0.27, -0.27], [-0.27, 0.27], [0.27, 0.27]].map(([x, z]) => (
-        <mesh key={`${x}${z}`} position={[x, -0.355, z]}>
-          <cylinderGeometry args={[0.035, 0.04, 0.02, 12]} />
-          <meshStandardMaterial color="#111" roughness={0.9} />
-        </mesh>
-      ))}
+      <InstancedDots
+        positions={FEET.map(([x, z]) => [x, -0.355, z] as const)}
+        geometry={<cylinderGeometry args={[0.035, 0.04, 0.02, 12]} />}
+        material={<meshStandardMaterial color="#111" roughness={0.9} />}
+      />
     </animated.group>
   );
 }
