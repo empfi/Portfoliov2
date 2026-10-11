@@ -17,7 +17,7 @@ import { AnimatedBook } from './models/AnimatedBook';
 import { GuestBook } from './models/GuestBook';
 import { Smartphone } from './models/Smartphone';
 import { Polaroid } from './models/Polaroid';
-import { LuaKey } from './models/LuaKey';
+// import { LuaKey } from './models/LuaKey';
 import { MinedockServer } from './models/MinedockServer';
 import { BloxvaultSafe } from './models/BloxvaultSafe';
 import { NeutrabotsToy } from './models/NeutrabotsToy';
@@ -261,7 +261,7 @@ export default function DeskScene() {
               </group>
 
               <MinecraftBlock />
-              <LuaKey />
+              {/* LuaProtect key is off the desk for now; re-enable by rendering <LuaKey /> here */}
               <MinedockServer />
               <BloxvaultSafe />
               <NeutrabotsToy />

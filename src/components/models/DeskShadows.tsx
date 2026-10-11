@@ -28,7 +28,6 @@ function createBlobTexture() {
 // plus a small x/z nudge toward the item's visual centre. Hand-tuned per item.
 const SHADOW_SIZE: Record<string, [number, number, number, number]> = {
   hyperplex:  [1.15, 1.15, 0, 0],
-  luakey:     [1.2, 1.2, 0.05, 0],
   minedock:   [1.2, 1.2, 0, 0],
   bloxvault:  [1.2, 1.2, 0, 0],
   neutrabots: [1.0, 1.0, 0, 0],

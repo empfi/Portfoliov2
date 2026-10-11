@@ -2,7 +2,7 @@
 import { useEffect, useRef } from 'react';
 import { useFocus } from '@/context/FocusContext';
 
-const PROJECTS = ['hyperplex', 'luakey', 'minedock', 'bloxvault', 'neutrabots'];
+const PROJECTS = ['hyperplex', 'minedock', 'bloxvault', 'neutrabots'];
 
 export default function RouteSync() {
   const { focusedItem, setFocusedItem } = useFocus();
