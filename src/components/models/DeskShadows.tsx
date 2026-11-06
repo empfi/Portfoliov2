@@ -33,8 +33,6 @@ const SHADOW_SIZE: Record<string, [number, number, number, number]> = {
   neutrabots: [1.0, 1.0, 0, 0],
   book:       [2.8, 3.4, 0, 0],
   guestbook:  [2.8, 3.4, 0, 0],
-  phone:      [1.5, 2.7, 0, 0],
-  airpods:    [0.95, 0.85, 0, 0],
   luakey:     [0.95, 0.85, 0, 0],
   polaroid_1: [1.15, 1.3, 0, 0],
   polaroid_2: [1.15, 1.3, 0, 0],

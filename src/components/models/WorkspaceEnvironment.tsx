@@ -24,8 +24,6 @@ const ITEM_LED_COLORS: Record<string, string> = {
   neutrabots: '#6366f1', // Discord blurple-indigo
   book: '#3b82f6',       // Journal sapphire blue
   guestbook: '#ea580c',  // Leather cognac warm orange
-  phone: '#38bdf8',      // Smartphone ice blue
-  airpods: '#e2e8f0',    // Apple MagSafe porcelain white
   polaroid_1: '#fbbf24', // Warm vintage film gold
   polaroid_2: '#fbbf24',
   polaroid_3: '#fbbf24',
