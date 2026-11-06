@@ -18,8 +18,15 @@ export function TexturedDesk() {
   });
   
   return (
-    <RoundedBox args={[14, 1, 8]} radius={0.05} smoothness={4} receiveShadow>
-      <meshStandardMaterial map={colorMap} normalMap={normalMap} roughnessMap={roughnessMap} roughness={1} />
+    <RoundedBox args={[14, 1, 8]} radius={0.05} smoothness={4} castShadow receiveShadow>
+      <meshStandardMaterial
+        map={colorMap}
+        normalMap={normalMap}
+        roughnessMap={roughnessMap}
+        roughness={1}
+        metalness={0}
+        envMapIntensity={0.25}
+      />
     </RoundedBox>
   );
 }

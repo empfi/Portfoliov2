@@ -1,13 +1,12 @@
 "use client";
 
-import { useLayoutEffect, useMemo, useRef } from 'react';
+import React, { useMemo, useRef } from 'react';
 import * as THREE from 'three';
+import { useFrame } from '@react-three/fiber';
 import { LANDSCAPE, PORTRAIT, usePortrait } from '@/context/DeskLayout';
+import { useFocus } from '@/context/FocusContext';
 
-// Soft radial-gradient blob, baked once and reused for every item. A live ContactShadows
-// re-renders the whole scene into an offscreen buffer every frame to get a real shadow —
-// measured at ~500 of this page's ~1000 draw calls per frame on its own. These are baked
-// per item's fixed rest spot instead: one instanced draw call for all of them combined.
+// Soft radial-gradient blob, baked once and shared across all shadow planes.
 function createBlobTexture() {
   if (typeof document === 'undefined') return null;
   const size = 128;
@@ -16,8 +15,8 @@ function createBlobTexture() {
   const ctx = canvas.getContext('2d');
   if (!ctx) return null;
   const g = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
-  g.addColorStop(0, 'rgba(0,0,0,0.75)');
-  g.addColorStop(0.45, 'rgba(0,0,0,0.5)');
+  g.addColorStop(0, 'rgba(0,0,0,0.68)');
+  g.addColorStop(0.45, 'rgba(0,0,0,0.42)');
   g.addColorStop(1, 'rgba(0,0,0,0)');
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, size, size);
@@ -27,54 +26,98 @@ function createBlobTexture() {
 // Full width/depth of each blob (~1.3x the item's footprint so a soft halo shows around it),
 // plus a small x/z nudge toward the item's visual centre. Hand-tuned per item.
 const SHADOW_SIZE: Record<string, [number, number, number, number]> = {
-  hyperplex:  [1.15, 1.15, 0, 0],
+  pc:         [1.9, 1.35, 0, -0.1],
+  hyperplex:  [0.95, 0.95, 0, 0],
   minedock:   [1.2, 1.2, 0, 0],
   bloxvault:  [1.2, 1.2, 0, 0],
   neutrabots: [1.0, 1.0, 0, 0],
   book:       [2.8, 3.4, 0, 0],
   guestbook:  [2.8, 3.4, 0, 0],
   phone:      [1.5, 2.7, 0, 0],
+  airpods:    [0.95, 0.85, 0, 0],
+  luakey:     [0.95, 0.85, 0, 0],
   polaroid_1: [1.15, 1.3, 0, 0],
   polaroid_2: [1.15, 1.3, 0, 0],
   polaroid_3: [1.15, 1.3, 0, 0],
 };
 
-const dummy = new THREE.Object3D();
+function ContactBlob({
+  id,
+  size,
+  texture,
+}: {
+  id: string;
+  size: [number, number, number, number];
+  texture: THREE.Texture;
+}) {
+  const portrait = usePortrait();
+  const { focusedItem } = useFocus();
+  const meshRef = useRef<THREE.Mesh>(null);
+  const matRef = useRef<THREE.MeshBasicMaterial>(null);
+  const opacityRef = useRef(1);
+
+  const table = portrait ? PORTRAIT : LANDSCAPE;
+  const rest = table[id];
+  const [sx, sz, ox, oz] = size;
+
+  useFrame((_, delta) => {
+    const mesh = meshRef.current;
+    const mat = matRef.current;
+    if (!mesh || !mat) return;
+
+    const dt = Math.min(delta, 0.1);
+    // The PC monitor stays on the desk when focused, so its stand shadow stays grounded
+    const target = focusedItem === id && id !== 'pc' ? 0 : 1;
+
+    if (Math.abs(opacityRef.current - target) > 0.002) {
+      opacityRef.current = THREE.MathUtils.lerp(opacityRef.current, target, 10 * dt);
+    } else {
+      opacityRef.current = target;
+    }
+
+    const alpha = opacityRef.current;
+    mat.opacity = alpha;
+    mesh.visible = alpha > 0.005;
+
+    // As an object lifts off the desk, its diffused shadow spreads slightly wider while fading out
+    const spread = 1 + (1 - alpha) * 0.28;
+    mesh.scale.set(sx * spread, sz * spread, 1);
+  });
+
+  if (!rest) return null;
+
+  return (
+    <mesh
+      ref={meshRef}
+      position={[rest.pos[0] + ox, 0.006, rest.pos[2] + oz]}
+      rotation={[-Math.PI / 2, 0, 0]}
+      scale={[sx, sz, 1]}
+      renderOrder={1}
+    >
+      <planeGeometry args={[1, 1]} />
+      <meshBasicMaterial
+        ref={matRef}
+        map={texture}
+        transparent
+        opacity={1}
+        depthWrite={false}
+        toneMapped={false}
+      />
+    </mesh>
+  );
+}
 
 export function DeskShadows() {
-  const portrait = usePortrait();
-  const meshRef = useRef<THREE.InstancedMesh>(null);
   const texture = useMemo(() => createBlobTexture(), []);
   const entries = useMemo(() => Object.entries(SHADOW_SIZE), []);
-
-  useLayoutEffect(() => {
-    const mesh = meshRef.current;
-    if (!mesh) return;
-    const table = portrait ? PORTRAIT : LANDSCAPE;
-    entries.forEach(([id, [sx, sz, ox, oz]], i) => {
-      const rest = table[id];
-      // Just above the desk (0), safely below every item's own surface — the previous 0.052
-      // sat *above* the phone's screen once scaled to rest (~0.0475-0.052, depending on the
-      // element), so the blob won the depth test and showed in front of it.
-      dummy.position.set((rest?.pos[0] ?? 0) + ox, 0.008, (rest?.pos[2] ?? 0) + oz);
-      // Rotation must be set per-instance, together with position: an instance's transform
-      // is T*R*S like any object's, but the parent instancedMesh below has NO rotation of
-      // its own — parent-rotating it while placing instances in that rotated local frame
-      // does not preserve world coordinates (rotation and translation don't commute).
-      dummy.rotation.set(-Math.PI / 2, 0, 0);
-      dummy.scale.set(sx, sz, 1);
-      dummy.updateMatrix();
-      mesh.setMatrixAt(i, dummy.matrix);
-    });
-    mesh.instanceMatrix.needsUpdate = true;
-  }, [portrait, entries]);
 
   if (!texture) return null;
 
   return (
-    <instancedMesh ref={meshRef} args={[undefined, undefined, entries.length]} renderOrder={1}>
-      <planeGeometry args={[1, 1]} />
-      <meshBasicMaterial map={texture} transparent depthWrite={false} toneMapped={false} />
-    </instancedMesh>
+    <group>
+      {entries.map(([id, size]) => (
+        <ContactBlob key={id} id={id} size={size} texture={texture} />
+      ))}
+    </group>
   );
 }

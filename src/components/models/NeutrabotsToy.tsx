@@ -1,200 +1,163 @@
 "use client";
-import React, { useRef, useEffect } from 'react';
+
+import React, { useRef, useMemo } from 'react';
 import * as THREE from 'three';
-import { useSpring, animated } from '@react-spring/three';
-import { useFrame, ThreeEvent } from '@react-three/fiber';
-import { useFocus } from '@/context/FocusContext';
+import { animated } from '@react-spring/three';
+import { useFrame } from '@react-three/fiber';
+import { RoundedBox } from '@react-three/drei';
 import { useRest } from '@/context/DeskLayout';
-import { useCursor, RoundedBox, Float } from '@react-three/drei';
+import { useInspectable } from '@/utils/useInspectable';
+
+function makeRoundedRect(w: number, h: number, r: number) {
+  const s = new THREE.Shape();
+  const x = -w / 2,
+    y = -h / 2;
+  s.moveTo(x + r, y);
+  s.lineTo(x + w - r, y);
+  s.quadraticCurveTo(x + w, y, x + w, y + r);
+  s.lineTo(x + w, y + h - r);
+  s.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  s.lineTo(x + r, y + h);
+  s.quadraticCurveTo(x, y + h, x, y + h - r);
+  s.lineTo(x, y + r);
+  s.quadraticCurveTo(x, y, x + r, y);
+  return s;
+}
+
+const VISOR_GEO = new THREE.ShapeGeometry(makeRoundedRect(0.38, 0.21, 0.048), 16);
+const EYE_GEO = new THREE.ShapeGeometry(makeRoundedRect(0.064, 0.092, 0.03), 16);
+const MOUTH_GEO = new THREE.ShapeGeometry(makeRoundedRect(0.048, 0.013, 0.006), 12);
+
+function createRearVentTexture() {
+  if (typeof document === 'undefined') return null;
+  const w = 256,
+    h = 128;
+  const c = document.createElement('canvas');
+  c.width = w;
+  c.height = h;
+  const ctx = c.getContext('2d');
+  if (!ctx) return null;
+
+  ctx.fillStyle = '#262b35';
+  ctx.fillRect(0, 0, w, h);
+
+  ctx.fillStyle = '#0d0f14';
+  for (let i = 0; i < 7; i++) {
+    ctx.beginPath();
+    ctx.roundRect(28 + i * 30, 26, 14, 76, 7);
+    ctx.fill();
+  }
+
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
 
 export function NeutrabotsToy() {
-  const { focusedItem, setFocusedItem } = useFocus();
-  const isHeld = focusedItem === 'neutrabots';
   const rest = useRest('neutrabots');
+  const { isHeld, pos, scale, rot, spinRef, groupHandlers } = useInspectable({
+    id: 'neutrabots',
+    restPos: rest.pos,
+    restRot: rest.rot,
+    heldRot: [-0.18, -0.14, 0],
+    heldScale: 1.62,
+  });
 
-  const rotQ = useRef(new THREE.Quaternion());
-  const lastPointer = useRef({ x: 0, y: 0 });
-  const isDragging = useRef(false);
-  const isPointerDown = useRef(false);
-  const angularVelocity = useRef({ x: 0, y: 0 });
-  const [hovered, setHovered] = React.useState(false);
-  
-  useCursor(hovered, isHeld ? 'grab' : 'pointer', 'auto');
+  const leftEyeRef = useRef<THREE.Mesh>(null);
+  const rightEyeRef = useRef<THREE.Mesh>(null);
+  const headGroupRef = useRef<THREE.Group>(null);
 
-  const isInitial = useRef(true);
-  const eyes = useRef<THREE.Group>(null);
-  const antennaOrb = useRef<THREE.MeshStandardMaterial>(null);
-  const thruster = useRef<THREE.MeshStandardMaterial>(null);
-  const mouthBars = useRef<(THREE.Mesh | null)[]>([]);
-
-  const [{ pos, scale, rot }, api] = useSpring(() => ({
-    pos: rest.pos,
-    scale: [1, 1, 1],
-    rot: rest.rot,
-    config: { mass: 1, tension: 180, friction: 26, clamp: true },
-  }));
-
-  useEffect(() => {
-    if (isInitial.current) {
-      isInitial.current = false;
-      return;
-    }
-
-    if (!isHeld) {
-      rotQ.current.identity();
-      angularVelocity.current = { x: 0, y: 0 };
-    }
-    api.start({
-      pos: isHeld ? [0, 4.5, 0] : rest.pos,
-      scale: isHeld ? [2, 2, 2] : [1, 1, 1],
-      rot: isHeld ? [0, 0, 0] : rest.rot,
-      immediate: false,
-    });
-  }, [isHeld, api, rest]);
-
-  useFrame((state, delta) => {
+  useFrame((state) => {
     const t = state.clock.elapsedTime;
-    if (eyes.current) {
-      // Blink every ~4s, and glance toward the pointer
-      const phase = t % 4;
-      eyes.current.scale.y = phase < 0.12 ? 0.15 : 1;
-      eyes.current.position.x = THREE.MathUtils.lerp(eyes.current.position.x, state.pointer.x * 0.025, 5 * delta);
-      eyes.current.position.y = THREE.MathUtils.lerp(eyes.current.position.y, 0.02 + state.pointer.y * 0.015, 5 * delta);
-    }
-    if (antennaOrb.current) antennaOrb.current.emissiveIntensity = 2 + Math.sin(t * 4) * 1.2;
-    if (thruster.current) thruster.current.emissiveIntensity = 2.2 + Math.sin(t * 23) * 0.4 + Math.sin(t * 37) * 0.3;
-    // "Talking" equaliser mouth while held
-    mouthBars.current.forEach((bar, i) => {
-      if (bar) bar.scale.y = isHeld ? 0.4 + Math.abs(Math.sin(t * (6 + i * 1.7) + i)) * 0.9 : 0.5;
-    });
-
-    if (isHeld && !isPointerDown.current) {
-      if (Math.abs(angularVelocity.current.x) > 0.0001 || Math.abs(angularVelocity.current.y) > 0.0001) {
-        const deltaQ = new THREE.Quaternion().setFromEuler(new THREE.Euler(angularVelocity.current.x, angularVelocity.current.y, 0, 'XYZ'));
-        rotQ.current.premultiply(deltaQ);
-        const euler = new THREE.Euler().setFromQuaternion(rotQ.current, 'XYZ');
-        api.start({ rot: [euler.x, euler.y, euler.z], immediate: true });
-        angularVelocity.current.x *= 0.95;
-        angularVelocity.current.y *= 0.95;
-      }
+    const cycle = t % 4.2;
+    const blink = cycle > 4.02 ? Math.max(0.08, Math.abs(cycle - 4.11) / 0.09) : 1;
+    if (leftEyeRef.current) leftEyeRef.current.scale.y = blink;
+    if (rightEyeRef.current) rightEyeRef.current.scale.y = blink;
+    if (headGroupRef.current && !isHeld) {
+      headGroupRef.current.rotation.z = Math.sin(t * 1.1) * 0.035;
+      headGroupRef.current.rotation.y = Math.sin(t * 0.65) * 0.06;
+    } else if (headGroupRef.current) {
+      headGroupRef.current.rotation.z = 0;
+      headGroupRef.current.rotation.y = 0;
     }
   });
 
-  const handlePointerDown = (e: ThreeEvent<PointerEvent>) => {
-    e.stopPropagation();
-    isPointerDown.current = true;
-    isDragging.current = false;
-    angularVelocity.current = { x: 0, y: 0 };
-    if (!isHeld) return;
-    lastPointer.current = { x: e.clientX, y: e.clientY };
-    (e.target as any).setPointerCapture?.(e.pointerId);
-  };
-
-  const handlePointerUp = (e: ThreeEvent<PointerEvent>) => {
-    isPointerDown.current = false;
-    (e.target as any).releasePointerCapture?.(e.pointerId);
-  };
-
-  const handlePointerMove = (e: ThreeEvent<PointerEvent>) => {
-    if (!isHeld || !isPointerDown.current) return;
-    const dx = e.clientX - lastPointer.current.x;
-    const dy = e.clientY - lastPointer.current.y;
-    if (Math.abs(dx) > 2 || Math.abs(dy) > 2) isDragging.current = true;
-    angularVelocity.current = { x: dy * 0.01, y: dx * 0.01 };
-    const deltaQ = new THREE.Quaternion().setFromEuler(new THREE.Euler(dy * 0.005, dx * 0.005, 0, 'XYZ'));
-    rotQ.current.premultiply(deltaQ);
-    const euler = new THREE.Euler().setFromQuaternion(rotQ.current, 'XYZ');
-    api.start({ rot: [euler.x, euler.y, euler.z], immediate: true });
-    lastPointer.current = { x: e.clientX, y: e.clientY };
-  };
-
-  const handleClick = (e: ThreeEvent<MouseEvent>) => {
-    e.stopPropagation();
-    if (!isDragging.current && !isHeld) {
-      setFocusedItem('neutrabots');
-    }
-  };
+  const ventTex = useMemo(() => createRearVentTexture(), []);
 
   return (
-    <animated.group
-      position={pos as any}
-      scale={scale as any}
-      rotation={rot as any}
-      onClick={handleClick}
-      onPointerDown={handlePointerDown}
-      onPointerUp={handlePointerUp}
-      onPointerMove={handlePointerMove}
-      onPointerOver={() => setHovered(true)}
-      onPointerOut={() => setHovered(false)}
-    >
-      <Float speed={2} rotationIntensity={0.1} floatIntensity={0.2}>
-        {/* Head shell: glossy white with a light-grey cap and a blurple band */}
-        <RoundedBox args={[0.5, 0.45, 0.5]} radius={0.07} smoothness={5} castShadow receiveShadow>
-          <meshPhysicalMaterial color="#f4f5f7" roughness={0.35} clearcoat={1} clearcoatRoughness={0.15} />
-        </RoundedBox>
-        <RoundedBox args={[0.4, 0.035, 0.4]} radius={0.015} smoothness={3} position={[0, 0.226, 0]}>
-          <meshStandardMaterial color="#d5d8de" roughness={0.4} />
-        </RoundedBox>
-        <RoundedBox args={[0.508, 0.035, 0.508]} radius={0.017} smoothness={3} position={[0, -0.17, 0]}>
-          <meshStandardMaterial color="#5865f2" roughness={0.35} metalness={0.2} />
-        </RoundedBox>
-
-        {/* Visor: dark frame + glass */}
-        <RoundedBox args={[0.44, 0.3, 0.02]} radius={0.05} smoothness={3} position={[0, 0.02, 0.242]}>
-          <meshStandardMaterial color="#2a2d34" roughness={0.5} />
-        </RoundedBox>
-        <RoundedBox args={[0.41, 0.27, 0.02]} radius={0.045} smoothness={3} position={[0, 0.02, 0.252]}>
-          <meshPhysicalMaterial color="#040507" roughness={0.08} clearcoat={1} clearcoatRoughness={0.05} />
-        </RoundedBox>
-
-        {/* Eyes (blink + follow the pointer) */}
-        <group ref={eyes} position={[0, 0.02, 0.264]}>
-          {[-0.09, 0.09].map((x) => (
-            <mesh key={x} position={[x, 0.02, 0]}>
-              <capsuleGeometry args={[0.03, 0.07, 6, 12]} />
-              <meshStandardMaterial color="#7ffcff" emissive="#00e5ff" emissiveIntensity={2.4} toneMapped={false} />
-            </mesh>
-          ))}
-        </group>
-
-        {/* Equaliser mouth */}
-        {[-0.04, -0.02, 0, 0.02, 0.04].map((x, i) => (
-          <mesh key={x} ref={(m) => { mouthBars.current[i] = m; }} position={[x, -0.07, 0.264]}>
-            <boxGeometry args={[0.012, 0.03, 0.004]} />
-            <meshStandardMaterial color="#00e5ff" emissive="#00e5ff" emissiveIntensity={1.4} />
-          </mesh>
+    <animated.group position={pos as any} scale={scale as any} rotation={rot as any} {...groupHandlers}>
+      <group ref={spinRef}>
+        {/* ── 1. Sturdy Rounded Bot Feet (flush at y = -0.30, no dock plate) ── */}
+        {[-0.088, 0.088].map((fx) => (
+          <RoundedBox
+            key={fx}
+            args={[0.105, 0.052, 0.165]}
+            radius={0.02}
+            smoothness={3}
+            position={[fx, -0.274, 0.012]}
+            castShadow
+            receiveShadow
+          >
+            <meshStandardMaterial color="#1b1e26" metalness={0.6} roughness={0.36} />
+          </RoundedBox>
         ))}
 
-        {/* Antenna: base, segmented mast, pulsing tip */}
-        <group position={[0, 0.24, 0.07]}>
-          <mesh>
-            <cylinderGeometry args={[0.035, 0.045, 0.03, 20]} />
-            <meshStandardMaterial color="#2a2d34" metalness={0.8} roughness={0.25} />
-          </mesh>
-          <mesh position={[0, 0.07, 0]}>
-            <cylinderGeometry args={[0.009, 0.011, 0.12, 10]} />
-            <meshStandardMaterial color="#c3c7ce" metalness={1} roughness={0.2} />
-          </mesh>
-          <mesh position={[0, 0.075, 0]} rotation={[Math.PI / 2, 0, 0]}>
-            <torusGeometry args={[0.014, 0.005, 6, 16]} />
-            <meshStandardMaterial color="#5865f2" />
-          </mesh>
-          <mesh position={[0, 0.15, 0]}>
-            <sphereGeometry args={[0.035, 20, 16]} />
-            <meshStandardMaterial ref={antennaOrb} color="#ff4d88" emissive="#ff0055" emissiveIntensity={2} />
-          </mesh>
-        </group>
+        {/* ── 2. Clean Matte-Graphite Torso & Articulated Side Arms (no text plate) ── */}
+        <RoundedBox args={[0.34, 0.24, 0.26]} radius={0.055} smoothness={4} position={[0, -0.135, 0]} castShadow receiveShadow>
+          <meshStandardMaterial color="#232731" metalness={0.55} roughness={0.34} />
+        </RoundedBox>
 
-        {/* Hover thruster with flickering glow */}
-        <mesh position={[0, -0.24, 0]}>
-          <cylinderGeometry args={[0.1, 0.06, 0.04, 24]} />
-          <meshStandardMaterial color="#2a2d34" metalness={0.8} roughness={0.3} />
+        {[-1, 1].map((side) => (
+          <group key={side} position={[side * 0.2, -0.13, 0]} rotation={[0.12, 0, side * -0.1]}>
+            <mesh position={[side * -0.02, 0.048, 0]} rotation={[0, 0, Math.PI / 2]}>
+              <cylinderGeometry args={[0.022, 0.022, 0.038, 16]} />
+              <meshStandardMaterial color="#6e7687" metalness={0.85} roughness={0.26} />
+            </mesh>
+            <RoundedBox args={[0.066, 0.185, 0.092]} radius={0.028} smoothness={3} castShadow>
+              <meshStandardMaterial color="#2c313d" metalness={0.58} roughness={0.32} />
+            </RoundedBox>
+          </group>
+        ))}
+
+        {/* Neck swivel collar */}
+        <mesh position={[0, 0.0, 0]}>
+          <cylinderGeometry args={[0.092, 0.108, 0.042, 24]} />
+          <meshStandardMaterial color="#171920" metalness={0.75} roughness={0.35} />
         </mesh>
-        <mesh position={[0, -0.262, 0]} rotation={[Math.PI / 2, 0, 0]}>
-          <circleGeometry args={[0.045, 24]} />
-          <meshStandardMaterial ref={thruster} color="#7ffcff" emissive="#00e5ff" emissiveIntensity={2.2} side={THREE.DoubleSide} toneMapped={false} />
-        </mesh>
-      </Float>
+
+        {/* ── 3. Clean Space-Grey Head & Crisp OLED Visor (no headphones) ── */}
+        <group ref={headGroupRef} position={[0, 0.175, 0]}>
+          <RoundedBox args={[0.48, 0.32, 0.35]} radius={0.075} smoothness={5} castShadow receiveShadow>
+            <meshStandardMaterial color="#2a2f3b" metalness={0.6} roughness={0.3} />
+          </RoundedBox>
+
+          {/* Glossy Black OLED Glass Visor */}
+          <mesh geometry={VISOR_GEO} position={[0, -0.005, 0.176]}>
+            <meshStandardMaterial color="#07090e" metalness={0.2} roughness={0.08} />
+          </mesh>
+
+          {/* Solid Crisp Glowing Blurple/Sky OLED Eyes */}
+          <mesh ref={leftEyeRef} geometry={EYE_GEO} position={[-0.092, 0.01, 0.178]}>
+            <meshBasicMaterial color="#8fb2ff" />
+          </mesh>
+          <mesh ref={rightEyeRef} geometry={EYE_GEO} position={[0.092, 0.01, 0.178]}>
+            <meshBasicMaterial color="#8fb2ff" />
+          </mesh>
+
+          {/* Subtle OLED mouth pill */}
+          <mesh geometry={MOUTH_GEO} position={[0, -0.064, 0.178]}>
+            <meshBasicMaterial color="#7aa2ff" />
+          </mesh>
+
+          {/* Rear machined cooling grille */}
+          {ventTex && (
+            <mesh position={[0, 0, -0.176]} rotation={[0, Math.PI, 0]}>
+              <planeGeometry args={[0.25, 0.12]} />
+              <meshStandardMaterial map={ventTex} roughness={0.45} metalness={0.5} />
+            </mesh>
+          )}
+        </group>
+      </group>
     </animated.group>
   );
 }

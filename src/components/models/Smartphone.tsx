@@ -681,9 +681,9 @@ export function Smartphone() {
   }, []);
 
   const { pos, rot, scale } = useSpring({
-    pos: isFocused ? [0, 1.5, 0] : rest.pos,
-    rot: isFocused ? [0.25, 0, 0] : rest.rot,
-    scale: isFocused ? [1.6, 1.6, 1.6] : [0.75, 0.75, 0.75],
+    pos: isFocused ? [0, 3.6, 0.8] : rest.pos,
+    rot: isFocused ? [0.68, 0, 0] : rest.rot,
+    scale: isFocused ? [1.55, 1.55, 1.55] : [0.75, 0.75, 0.75],
     config: { mass: 1, tension: 180, friction: 26, clamp: true },
   });
 
