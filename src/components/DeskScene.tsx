@@ -17,7 +17,6 @@ import { DesktopPC } from './models/DesktopPC';
 import { MinecraftBlock } from './models/MinecraftBlock';
 import { AnimatedBook } from './models/AnimatedBook';
 import { GuestBook } from './models/GuestBook';
-import { AirPodsCase } from './models/AirPodsCase';
 import { Polaroid } from './models/Polaroid';
 import { LuaKey } from './models/LuaKey';
 import { MinedockServer } from './models/MinedockServer';
@@ -50,7 +49,7 @@ useTexture.preload([
   '/stack/luau.webp',
 ]);
 
-const SWOOP_ITEMS = new Set(['hyperplex', 'luakey', 'minedock', 'bloxvault', 'neutrabots', 'mysterybox', 'airpods']);
+const SWOOP_ITEMS = new Set(['hyperplex', 'luakey', 'minedock', 'bloxvault', 'neutrabots', 'mysterybox']);
 
 // Held items float in the upper half of the frame while keeping both the PC monitor and walnut desk in view below
 export const HELD_ITEM_POS: [number, number, number] = [0, 5.05, 2.2];
@@ -346,8 +345,6 @@ export default function DeskScene() {
               {/* Mystery box is off the desk for now; re-enable by rendering <MysteryBox /> here */}
               <AnimatedBook />
               <GuestBook />
-
-              <AirPodsCase />
 
               <Polaroid id="polaroid_1" caption="Coming soon" />
               <Polaroid id="polaroid_2" caption="Coming soon" />
