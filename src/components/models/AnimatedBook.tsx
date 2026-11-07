@@ -160,9 +160,6 @@ function RightPageText({ visible, posY }: { visible: boolean; posY: any }) {
       <Text font={FONT} fontSize={0.165} color="#334155" anchorX="center" anchorY="top" position={[0, 0.05, 0]} maxWidth={2.0} textAlign="center" lineHeight={1.25}>
         {"• Diamond Sword → hyperplex.de\n• Brass Key → LuaProtect\n• Safe → Bloxvault Extension\n• Server → MineDock Control Plane"}
       </Text>
-      <Text font={FONT} fontSize={0.115} color="#64748b" anchorX="center" anchorY="top" position={[0, -0.92, 0]} textAlign="center">
-        {"Detailed project docs are on the Studio Display."}
-      </Text>
     </animated.group>
   );
 }
