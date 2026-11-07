@@ -11,17 +11,17 @@ export type Rest = { pos: Vec3; rot: Vec3 };
 // something up.
 export const LANDSCAPE: Record<string, Rest> = {
   pc:         { pos: [0, 0, -2.75],       rot: [0, 0, 0] },
-  hyperplex:  { pos: [1.55, 0.046, -0.45], rot: [-Math.PI / 2, 0, -0.35] },
-  luakey:     { pos: [0.5, 0.05, -0.9],   rot: [Math.PI / 2, 0, -0.4] },
-  minedock:   { pos: [3.1, 0.45, -2.35],  rot: [0, -0.35, 0] },
-  bloxvault:  { pos: [-3.1, 0.4, -2.25],  rot: [0, 0.28, 0] },
-  neutrabots: { pos: [3.4, 0.30, -0.6],   rot: [0, -0.32, 0] },
+  hyperplex:  { pos: [1.65, 0.046, -0.55], rot: [-Math.PI / 2, 0, -0.38] },
+  luakey:     { pos: [-1.65, 0.05, -0.75], rot: [Math.PI / 2, 0, 0.38] },
+  minedock:   { pos: [4.6, 0.45, -2.0],   rot: [0, -0.35, 0] },
+  bloxvault:  { pos: [-4.6, 0.4, -2.0],   rot: [0, 0.32, 0] },
+  neutrabots: { pos: [2.95, 0.30, -1.0],  rot: [0, -0.28, 0] },
   mysterybox: { pos: [-5.8, 0, -1.8],     rot: [0, 0, 0] },
-  book:       { pos: [-1.75, 0.06, 0.95], rot: [0, -0.15, 0] },
-  guestbook:  { pos: [5.2, 0.06, -1.2],   rot: [0, -0.3, 0] },
-  polaroid_1: { pos: [3.5, 0.02, 2.5],    rot: [0, -0.2, 0] },
-  polaroid_2: { pos: [2.2, 0.02, 3.0],    rot: [0, 0.3, 0] },
-  polaroid_3: { pos: [0.8, 0.02, 2.8],    rot: [0, -0.1, 0] },
+  book:       { pos: [-4.0, 0.06, 0.55],  rot: [0, 0.16, 0] },
+  guestbook:  { pos: [4.6, 0.06, 0.45],   rot: [0, -0.20, 0] },
+  polaroid_1: { pos: [4.0, 0.02, 2.2],    rot: [0, -0.18, 0] },
+  polaroid_2: { pos: [2.4, 0.02, 2.7],    rot: [0, 0.22, 0] },
+  polaroid_3: { pos: [0.8, 0.02, 2.4],    rot: [0, -0.10, 0] },
 };
 
 export const PORTRAIT: Record<string, Rest> = {
