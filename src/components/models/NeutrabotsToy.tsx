@@ -3,7 +3,6 @@
 import React, { useRef, useMemo } from 'react';
 import * as THREE from 'three';
 import { animated } from '@react-spring/three';
-import { useFrame } from '@react-three/fiber';
 import { RoundedBox } from '@react-three/drei';
 import { useRest } from '@/context/DeskLayout';
 import { useInspectable } from '@/utils/useInspectable';
@@ -63,24 +62,6 @@ export function NeutrabotsToy() {
     heldScale: 1.62,
   });
 
-  const leftEyeRef = useRef<THREE.Mesh>(null);
-  const rightEyeRef = useRef<THREE.Mesh>(null);
-  const headGroupRef = useRef<THREE.Group>(null);
-
-  useFrame((state) => {
-    const t = state.clock.elapsedTime;
-    const cycle = t % 4.2;
-    const blink = cycle > 4.02 ? Math.max(0.08, Math.abs(cycle - 4.11) / 0.09) : 1;
-    if (leftEyeRef.current) leftEyeRef.current.scale.y = blink;
-    if (rightEyeRef.current) rightEyeRef.current.scale.y = blink;
-    if (headGroupRef.current && !isHeld) {
-      headGroupRef.current.rotation.z = Math.sin(t * 1.1) * 0.035;
-      headGroupRef.current.rotation.y = Math.sin(t * 0.65) * 0.06;
-    } else if (headGroupRef.current) {
-      headGroupRef.current.rotation.z = 0;
-      headGroupRef.current.rotation.y = 0;
-    }
-  });
 
   const ventTex = useMemo(() => createRearVentTexture(), []);
 
@@ -126,7 +107,7 @@ export function NeutrabotsToy() {
         </mesh>
 
         {/* ── 3. Clean Space-Grey Head & Crisp OLED Visor (no headphones) ── */}
-        <group ref={headGroupRef} position={[0, 0.175, 0]}>
+        <group  position={[0, 0.175, 0]}>
           <RoundedBox args={[0.48, 0.32, 0.35]} radius={0.075} smoothness={5} castShadow receiveShadow>
             <meshStandardMaterial color="#2a2f3b" metalness={0.6} roughness={0.3} />
           </RoundedBox>
@@ -137,10 +118,10 @@ export function NeutrabotsToy() {
           </mesh>
 
           {/* Solid Crisp Glowing Blurple/Sky OLED Eyes */}
-          <mesh ref={leftEyeRef} geometry={EYE_GEO} position={[-0.092, 0.01, 0.178]}>
+          <mesh  geometry={EYE_GEO} position={[-0.092, 0.01, 0.178]}>
             <meshBasicMaterial color="#8fb2ff" />
           </mesh>
-          <mesh ref={rightEyeRef} geometry={EYE_GEO} position={[0.092, 0.01, 0.178]}>
+          <mesh  geometry={EYE_GEO} position={[0.092, 0.01, 0.178]}>
             <meshBasicMaterial color="#8fb2ff" />
           </mesh>
 

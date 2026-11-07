@@ -1,101 +1,13 @@
 "use client";
-import React, { useLayoutEffect, useRef, useMemo } from 'react';
+
+import React, { useMemo } from 'react';
 import * as THREE from 'three';
 import { animated } from '@react-spring/three';
-import { useFrame } from '@react-three/fiber';
 import { RoundedBox } from '@react-three/drei';
 import { useRest } from '@/context/DeskLayout';
 import { useInspectable } from '@/utils/useInspectable';
 
-function canvasTexture(w: number, h: number, draw: (ctx: CanvasRenderingContext2D) => void) {
-  if (typeof document === 'undefined') return null;
-  // Drawn at 4x so labels stay crisp when the item is held up to the camera
-  const scale = 4;
-  const canvas = document.createElement('canvas');
-  canvas.width = w * scale;
-  canvas.height = h * scale;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return null;
-  ctx.scale(scale, scale);
-  draw(ctx);
-  const tex = new THREE.CanvasTexture(canvas);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  tex.anisotropy = 4;
-  return tex;
-}
-
-// Combination dial face: 100 ticks, numbers every 10
-function createDialTexture() {
-  return canvasTexture(256, 256, (ctx) => {
-    ctx.fillStyle = '#1b1d21';
-    ctx.fillRect(0, 0, 256, 256);
-    ctx.translate(128, 128);
-    ctx.strokeStyle = '#e8e8ea';
-    ctx.fillStyle = '#e8e8ea';
-    ctx.font = 'bold 20px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    for (let i = 0; i < 100; i++) {
-      const a = (i / 100) * Math.PI * 2 - Math.PI / 2;
-      const major = i % 10 === 0;
-      const r0 = major ? 98 : i % 5 === 0 ? 106 : 112;
-      ctx.lineWidth = major ? 4 : 2;
-      ctx.beginPath();
-      ctx.moveTo(Math.cos(a) * r0, Math.sin(a) * r0);
-      ctx.lineTo(Math.cos(a) * 122, Math.sin(a) * 122);
-      ctx.stroke();
-      if (major) ctx.fillText(String(i), Math.cos(a) * 78, Math.sin(a) * 78);
-    }
-  });
-}
-
-function createNameplateTexture() {
-  return canvasTexture(256, 64, (ctx) => {
-    const g = ctx.createLinearGradient(0, 0, 0, 64);
-    g.addColorStop(0, '#e2bd5c');
-    g.addColorStop(1, '#a8812c');
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, 256, 64);
-    ctx.fillStyle = '#3b2a08';
-    ctx.font = 'bold 30px serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('BLOXVAULT', 128, 34);
-  });
-}
-
-const DOOR_GEO = (() => {
-  const s = new THREE.Shape();
-  const w = 0.52,
-    r = 0.035,
-    x = -w / 2,
-    y = -w / 2;
-  s.moveTo(x + r, y);
-  s.lineTo(x + w - r, y);
-  s.quadraticCurveTo(x + w, y, x + w, y + r);
-  s.lineTo(x + w, y + w - r);
-  s.quadraticCurveTo(x + w, y + w, x + w - r, y + w);
-  s.lineTo(x + r, y + w);
-  s.quadraticCurveTo(x, y + w, x, y + w - r);
-  s.lineTo(x, y + r);
-  s.quadraticCurveTo(x, y, x + r, y);
-  return new THREE.ExtrudeGeometry(s, {
-    depth: 0.04,
-    bevelEnabled: true,
-    bevelSize: 0.01,
-    bevelThickness: 0.01,
-    bevelSegments: 3,
-  });
-})();
-
-// Bolt heads around the door edge
-const BOLTS: [number, number][] = [-0.19, -0.065, 0.065, 0.19].flatMap((t) => [
-  [t, 0.235],
-  [t, -0.235],
-  [-0.235, t],
-] as [number, number][]);
-const KEYPAD_KEYS = [0, 1, 2, 3].flatMap((r) => [0, 1, 2].map((c) => [c, r] as const));
-const SPOKES = [0, 1, 2].map((i) => (i / 3) * Math.PI * 2 + Math.PI / 2);
+const SPOKE_ANGLES = [0, (2 * Math.PI) / 3, (4 * Math.PI) / 3];
 const FEET: [number, number][] = [
   [-0.27, -0.27],
   [0.27, -0.27],
@@ -103,38 +15,13 @@ const FEET: [number, number][] = [
   [0.27, 0.27],
 ];
 
-const dummy = new THREE.Object3D();
-
-/** Small, identical, position-only decorations (bolt heads, keypad buttons, feet) as one
- *  instanced draw call each, instead of one <mesh> per copy. */
-function InstancedDots({
-  positions,
-  geometry,
-  material,
-}: {
-  positions: readonly (readonly [number, number, number])[];
-  geometry: React.ReactNode;
-  material: React.ReactNode;
-}) {
-  const ref = useRef<THREE.InstancedMesh>(null);
-  useLayoutEffect(() => {
-    const mesh = ref.current;
-    if (!mesh) return;
-    positions.forEach(([x, y, z], i) => {
-      dummy.position.set(x, y, z);
-      dummy.updateMatrix();
-      mesh.setMatrixAt(i, dummy.matrix);
-    });
-    mesh.instanceMatrix.needsUpdate = true;
-  }, [positions]);
-  return (
-    <instancedMesh ref={ref} args={[undefined, undefined, positions.length]}>
-      {geometry}
-      {material}
-    </instancedMesh>
-  );
-}
-
+/**
+ * Clean Minimalist Bloxvault Safe
+ * - Sleek modern vault body with heavy-gauge beveled door.
+ * - Iconic 3-spoke brushed chrome wheel with gold central emblem.
+ * - Minimalist digital electronic access pad with calm steady status LED.
+ * - Fully static on desk (zero looping animations).
+ */
 export function BloxvaultSafe() {
   const rest = useRest('bloxvault');
   const { pos, scale, rot, spinRef, groupHandlers } = useInspectable({
@@ -144,128 +31,136 @@ export function BloxvaultSafe() {
     heldScale: 1.48,
   });
 
-  const statusLed = useRef<THREE.MeshStandardMaterial>(null);
+  const steelMat = useMemo(
+    () =>
+      new THREE.MeshStandardMaterial({
+        color: '#2e323b',
+        metalness: 0.55,
+        roughness: 0.38,
+      }),
+    [],
+  );
 
-  useFrame((state) => {
-    // Slow "armed" pulse on the keypad LED
-    if (statusLed.current) statusLed.current.emissiveIntensity = 1.5 + Math.sin(state.clock.elapsedTime * 3) * 1.2;
-  });
+  const doorMat = useMemo(
+    () =>
+      new THREE.MeshStandardMaterial({
+        color: '#3d424e',
+        metalness: 0.65,
+        roughness: 0.28,
+      }),
+    [],
+  );
 
-  const textures = useMemo(() => ({ dial: createDialTexture(), plate: createNameplateTexture() }), []);
+  const chromeMat = useMemo(
+    () =>
+      new THREE.MeshStandardMaterial({
+        color: '#e2e8f0',
+        metalness: 0.96,
+        roughness: 0.16,
+      }),
+    [],
+  );
+
+  const goldMat = useMemo(
+    () =>
+      new THREE.MeshStandardMaterial({
+        color: '#eab308',
+        metalness: 0.9,
+        roughness: 0.25,
+      }),
+    [],
+  );
 
   return (
     <animated.group position={pos as any} scale={scale as any} rotation={rot as any} {...groupHandlers}>
       <group ref={spinRef}>
-        {/* Body */}
-        <RoundedBox args={[0.7, 0.7, 0.7]} radius={0.05} smoothness={4} castShadow receiveShadow>
-          <meshStandardMaterial color="#5d626b" metalness={0.5} roughness={0.4} />
+        {/* ── Main Safe Body ── */}
+        <RoundedBox args={[0.72, 0.72, 0.72]} radius={0.045} smoothness={4} castShadow receiveShadow>
+          <primitive object={steelMat} attach="material" />
         </RoundedBox>
 
-        {/* Door recess and door */}
-        <mesh position={[0, 0, 0.345]}>
-          <boxGeometry args={[0.6, 0.6, 0.02]} />
-          <meshStandardMaterial color="#141518" roughness={0.8} />
+        {/* ── Door Recess Frame ── */}
+        <mesh position={[0, 0, 0.355]}>
+          <planeGeometry args={[0.60, 0.60]} />
+          <meshStandardMaterial color="#111317" roughness={0.8} />
         </mesh>
-        <mesh geometry={DOOR_GEO} position={[0, 0, 0.33]} castShadow>
-          <meshStandardMaterial color="#8a9099" metalness={0.55} roughness={0.3} />
-        </mesh>
-        <RoundedBox args={[0.4, 0.4, 0.012]} radius={0.015} smoothness={2} position={[0, 0, 0.385]}>
-          <meshStandardMaterial color="#9aa0a9" metalness={0.5} roughness={0.32} />
+
+        {/* ── Heavy Beveled Safe Door ── */}
+        <RoundedBox args={[0.55, 0.55, 0.038]} radius={0.02} smoothness={3} position={[0, 0, 0.375]} castShadow>
+          <primitive object={doorMat} attach="material" />
         </RoundedBox>
-        <InstancedDots
-          positions={BOLTS.map(([x, y]) => [x, y, 0.382] as const)}
-          geometry={<sphereGeometry args={[0.012, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2]} />}
-          material={<meshStandardMaterial color="#d4d7dc" metalness={1} roughness={0.2} />}
-        />
 
-        {/* Hinge barrels */}
-        {[0.16, -0.16].map((y) => (
-          <group key={y} position={[0.285, y, 0.36]}>
-            <mesh>
-              <cylinderGeometry args={[0.022, 0.022, 0.1, 16]} />
-              <meshStandardMaterial color="#b9bcc2" metalness={1} roughness={0.25} />
-            </mesh>
-            {[0.055, -0.055].map((cy) => (
-              <mesh key={cy} position={[0, cy, 0]}>
-                <sphereGeometry args={[0.022, 12, 8]} />
-                <meshStandardMaterial color="#b9bcc2" metalness={1} roughness={0.25} />
-              </mesh>
-            ))}
-          </group>
-        ))}
-
-        {/* Combination dial: chrome bezel, numbered face, knurled knob, index mark */}
-        <group position={[-0.08, 0.085, 0.39]}>
+        {/* ── Clean 3-Spoke Chrome Vault Wheel ── */}
+        <group position={[-0.08, -0.02, 0.40]}>
+          {/* Wheel Hub */}
           <mesh rotation={[Math.PI / 2, 0, 0]}>
-            <cylinderGeometry args={[0.1, 0.105, 0.014, 48]} />
-            <meshStandardMaterial color="#c8cbd0" metalness={1} roughness={0.18} />
+            <cylinderGeometry args={[0.065, 0.065, 0.032, 28]} />
+            <primitive object={chromeMat} attach="material" />
           </mesh>
-          <mesh position={[0, 0, 0.009]}>
-            <circleGeometry args={[0.088, 48]} />
-            <meshStandardMaterial map={textures.dial} metalness={0.3} roughness={0.4} />
-          </mesh>
-          <mesh position={[0, 0, 0.025]} rotation={[Math.PI / 2, 0, 0]}>
-            <cylinderGeometry args={[0.038, 0.042, 0.03, 24]} />
-            <meshStandardMaterial color="#c8cbd0" metalness={1} roughness={0.3} />
-          </mesh>
-          <mesh position={[0, 0.107, 0.004]}>
-            <boxGeometry args={[0.008, 0.018, 0.006]} />
-            <meshStandardMaterial color="#e03a3a" />
-          </mesh>
-        </group>
 
-        {/* Three-spoke handle wheel */}
-        <group position={[-0.08, -0.14, 0.39]}>
-          <mesh rotation={[Math.PI / 2, 0, 0]}>
-            <cylinderGeometry args={[0.028, 0.028, 0.04, 20]} />
-            <meshStandardMaterial color="#c8cbd0" metalness={1} roughness={0.2} />
+          {/* Central Gold Emblem Cap */}
+          <mesh position={[0, 0, 0.017]}>
+            <circleGeometry args={[0.042, 24]} />
+            <primitive object={goldMat} attach="material" />
           </mesh>
-          {SPOKES.map((a) => (
-            <group key={a} rotation={[0, 0, a]}>
-              <mesh position={[0.05, 0, 0.02]} rotation={[0, 0, Math.PI / 2]}>
-                <cylinderGeometry args={[0.009, 0.009, 0.1, 10]} />
-                <meshStandardMaterial color="#c8cbd0" metalness={1} roughness={0.2} />
-              </mesh>
-              <mesh position={[0.1, 0, 0.02]}>
-                <sphereGeometry args={[0.018, 16, 12]} />
-                <meshStandardMaterial color="#1b1c1f" roughness={0.35} />
+
+          {/* Keyhole / lock slot in center of emblem */}
+          <mesh position={[0, 0, 0.018]}>
+            <planeGeometry args={[0.012, 0.024]} />
+            <meshBasicMaterial color="#111317" />
+          </mesh>
+
+          {/* 3 Clean Spoke Handles */}
+          {SPOKE_ANGLES.map((angle) => (
+            <group key={angle} rotation={[0, 0, angle]}>
+              <mesh position={[0.09, 0, 0.005]} rotation={[0, 0, Math.PI / 2]}>
+                <cylinderGeometry args={[0.011, 0.011, 0.12, 14]} />
+                <primitive object={chromeMat} attach="material" />
               </mesh>
             </group>
           ))}
         </group>
 
-        {/* Electronic keypad */}
-        <group position={[0.135, 0.075, 0.39]}>
-          <RoundedBox args={[0.12, 0.19, 0.016]} radius={0.008} smoothness={2}>
-            <meshStandardMaterial color="#17181b" metalness={0.4} roughness={0.4} />
+        {/* ── Sleek Digital Keypad & Status LED ── */}
+        <group position={[0.16, 0.03, 0.40]}>
+          <RoundedBox args={[0.11, 0.22, 0.016]} radius={0.008} smoothness={2}>
+            <meshStandardMaterial color="#14161b" metalness={0.4} roughness={0.35} />
           </RoundedBox>
-          <mesh position={[0, 0.07, 0.009]}>
-            <planeGeometry args={[0.09, 0.028]} />
-            <meshStandardMaterial color="#0b2a14" emissive="#1f7a3a" emissiveIntensity={0.6} />
+
+          {/* Status Display Bar (Steady emerald, zero animation) */}
+          <mesh position={[0, 0.075, 0.009]}>
+            <planeGeometry args={[0.08, 0.022]} />
+            <meshStandardMaterial color="#10b981" emissive="#10b981" emissiveIntensity={1.2} />
           </mesh>
-          <InstancedDots
-            positions={KEYPAD_KEYS.map(([c, r]) => [(c - 1) * 0.032, 0.03 - r * 0.028, 0.011] as const)}
-            geometry={<boxGeometry args={[0.024, 0.02, 0.008]} />}
-            material={<meshStandardMaterial color="#9ea2a9" metalness={0.8} roughness={0.3} />}
-          />
-          <mesh position={[0.045, 0.087, 0.009]}>
-            <circleGeometry args={[0.006, 12]} />
-            <meshStandardMaterial ref={statusLed} color="#ff2a2a" emissive="#ff2a2a" emissiveIntensity={2} />
-          </mesh>
+
+          {/* Touch Number Buttons Grid */}
+          {[0.035, 0.005, -0.025, -0.055].map((y, row) => (
+            <group key={row} position={[0, y, 0.009]}>
+              {[-0.028, 0, 0.028].map((x, col) => (
+                <mesh key={col} position={[x, 0, 0]}>
+                  <boxGeometry args={[0.02, 0.018, 0.004]} />
+                  <meshStandardMaterial color="#3f434d" metalness={0.7} roughness={0.3} />
+                </mesh>
+              ))}
+            </group>
+          ))}
         </group>
 
-        {/* Brass nameplate */}
-        <mesh position={[0.135, -0.13, 0.392]}>
-          <planeGeometry args={[0.13, 0.034]} />
-          <meshStandardMaterial map={textures.plate} metalness={0.7} roughness={0.35} />
-        </mesh>
+        {/* ── Dual Heavy-Duty Cylindrical Hinges ── */}
+        {[0.18, -0.18].map((y) => (
+          <mesh key={y} position={[0.278, y, 0.375]}>
+            <cylinderGeometry args={[0.024, 0.024, 0.11, 20]} />
+            <meshStandardMaterial color="#474c57" metalness={0.8} roughness={0.25} />
+          </mesh>
+        ))}
 
-        {/* Feet */}
-        <InstancedDots
-          positions={FEET.map(([x, z]) => [x, -0.355, z] as const)}
-          geometry={<cylinderGeometry args={[0.035, 0.04, 0.02, 12]} />}
-          material={<meshStandardMaterial color="#111" roughness={0.9} />}
-        />
+        {/* ── Rubber Feet ── */}
+        {FEET.map(([x, z], i) => (
+          <mesh key={i} position={[x, -0.37, z]}>
+            <cylinderGeometry args={[0.035, 0.04, 0.02, 16]} />
+            <meshStandardMaterial color="#111317" roughness={0.9} />
+          </mesh>
+        ))}
       </group>
     </animated.group>
   );

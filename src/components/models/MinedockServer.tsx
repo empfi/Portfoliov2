@@ -1,136 +1,26 @@
 "use client";
-import React, { useLayoutEffect, useRef, useMemo } from 'react';
+
+import React, { useMemo } from 'react';
 import * as THREE from 'three';
 import { animated } from '@react-spring/three';
-import { useFrame } from '@react-three/fiber';
 import { RoundedBox } from '@react-three/drei';
 import { useRest } from '@/context/DeskLayout';
 import { useInspectable } from '@/utils/useInspectable';
 
-function canvasTexture(w: number, h: number, draw: (ctx: CanvasRenderingContext2D) => void) {
-  if (typeof document === 'undefined') return null;
-  // Drawn at 4x so labels stay crisp when the item is held up to the camera
-  const scale = 4;
-  const canvas = document.createElement('canvas');
-  canvas.width = w * scale;
-  canvas.height = h * scale;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return null;
-  ctx.scale(scale, scale);
-  draw(ctx);
-  const tex = new THREE.CanvasTexture(canvas);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  tex.anisotropy = 4;
-  return tex;
-}
+const SLED_Y = [0.18, 0.03, -0.12, -0.27];
+const FEET: [number, number][] = [
+  [-0.27, -0.27],
+  [0.27, -0.27],
+  [-0.27, 0.27],
+  [0.27, 0.27],
+];
 
-// Perforated drive-bay grille
-function createGrilleTexture() {
-  return canvasTexture(128, 32, (ctx) => {
-    ctx.fillStyle = '#3a3f48';
-    ctx.fillRect(0, 0, 128, 32);
-    ctx.fillStyle = '#07080a';
-    for (let y = 0; y < 4; y++) {
-      for (let x = 0; x < 16; x++) {
-        ctx.beginPath();
-        ctx.arc(4 + x * 8 + (y % 2) * 4, 4 + y * 8, 2.4, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    }
-  });
-}
-
-// Horizontal vent slots for the top and side panels
-function createSlotTexture() {
-  return canvasTexture(128, 128, (ctx) => {
-    ctx.fillStyle = '#2b2f36';
-    ctx.fillRect(0, 0, 128, 128);
-    ctx.fillStyle = '#0a0b0d';
-    for (let y = 0; y < 10; y++) {
-      for (let x = 0; x < 2; x++) {
-        ctx.beginPath();
-        ctx.roundRect(8 + x * 60, 8 + y * 12, 52, 5, 2.5);
-        ctx.fill();
-      }
-    }
-  });
-}
-
-function createLcdTexture() {
-  return canvasTexture(256, 48, (ctx) => {
-    ctx.fillStyle = '#06140a';
-    ctx.fillRect(0, 0, 256, 48);
-    ctx.fillStyle = '#3dff6a';
-    ctx.font = 'bold 22px monospace';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('MINEDOCK', 12, 24);
-    ctx.font = '14px monospace';
-    ctx.fillStyle = '#2bd456';
-    ctx.fillText('● 20/20 ONLINE', 136, 24);
-  });
-}
-
-const SLED_Y = [0.17, 0.02, -0.13, -0.28];
-const FAN_BLADE_ANGLES = [0, 1, 2, 3, 4].map((i) => (i / 5) * Math.PI * 2);
-
-const dummyMat = new THREE.Matrix4();
-const dummyPos = new THREE.Vector3();
-const dummyQuat = new THREE.Quaternion();
-const dummyEuler = new THREE.Euler();
-const dummyScale = new THREE.Vector3(1, 1, 1);
-
-/** One fan's blades as a single instanced draw call instead of five separate meshes. */
-function FanBlades() {
-  const ref = useRef<THREE.InstancedMesh>(null);
-  useLayoutEffect(() => {
-    const mesh = ref.current;
-    if (!mesh) return;
-    FAN_BLADE_ANGLES.forEach((a, i) => {
-      dummyPos.set(Math.cos(a) * 0.07, Math.sin(a) * 0.07, 0);
-      dummyEuler.set(0.5, 0, a, 'ZYX');
-      dummyQuat.setFromEuler(dummyEuler);
-      dummyMat.compose(dummyPos, dummyQuat, dummyScale);
-      mesh.setMatrixAt(i, dummyMat);
-    });
-    mesh.instanceMatrix.needsUpdate = true;
-  }, []);
-  return (
-    <instancedMesh ref={ref} args={[undefined, undefined, FAN_BLADE_ANGLES.length]}>
-      <boxGeometry args={[0.075, 0.035, 0.004]} />
-      <meshStandardMaterial color="#26282d" />
-    </instancedMesh>
-  );
-}
-
-/** Small, identical, position-only decorations as one instanced draw call. */
-function InstancedDots({
-  positions,
-  geometry,
-  material,
-}: {
-  positions: readonly (readonly [number, number, number])[];
-  geometry: React.ReactNode;
-  material: React.ReactNode;
-}) {
-  const ref = useRef<THREE.InstancedMesh>(null);
-  useLayoutEffect(() => {
-    const mesh = ref.current;
-    if (!mesh) return;
-    positions.forEach(([x, y, z], i) => {
-      dummyPos.set(x, y, z);
-      dummyMat.compose(dummyPos, dummyQuat.identity(), dummyScale);
-      mesh.setMatrixAt(i, dummyMat);
-    });
-    mesh.instanceMatrix.needsUpdate = true;
-  }, [positions]);
-  return (
-    <instancedMesh ref={ref} args={[undefined, undefined, positions.length]}>
-      {geometry}
-      {material}
-    </instancedMesh>
-  );
-}
-
+/**
+ * Clean Minimalist MineDock Server
+ * - Sleek modern enterprise server tower with 4 hot-swap drive bays.
+ * - Upper dark glass status bar with steady emerald health light.
+ * - Fully static on desk (zero flickering LEDs, zero spinning fans).
+ */
 export function MinedockServer() {
   const rest = useRest('minedock');
   const { pos, scale, rot, spinRef, groupHandlers } = useInspectable({
@@ -140,190 +30,111 @@ export function MinedockServer() {
     heldScale: 1.4,
   });
 
-  const fan1 = useRef<THREE.Group>(null);
-  const fan2 = useRef<THREE.Group>(null);
-  // Drive activity LEDs, flickered from useFrame
-  const activityLeds = useRef<(THREE.MeshStandardMaterial | null)[]>([]);
+  const chassisMat = useMemo(
+    () =>
+      new THREE.MeshStandardMaterial({
+        color: '#282c35',
+        metalness: 0.6,
+        roughness: 0.38,
+      }),
+    [],
+  );
 
-  useFrame((state, delta) => {
-    if (fan1.current && fan2.current) {
-      fan1.current.rotation.z += delta * 15;
-      fan2.current.rotation.z += delta * 15;
-    }
+  const sledMat = useMemo(
+    () =>
+      new THREE.MeshStandardMaterial({
+        color: '#383d49',
+        metalness: 0.5,
+        roughness: 0.32,
+      }),
+    [],
+  );
 
-    // Irregular disk-activity blinking, a different rhythm per bay
-    const t = state.clock.elapsedTime;
-    activityLeds.current.forEach((mat, i) => {
-      if (!mat) return;
-      const busy = Math.sin(t * (7 + i * 3.1) + i * 1.7) + Math.sin(t * (2.3 + i)) > 0.6;
-      mat.emissiveIntensity = busy ? 3 : 0.25;
-    });
-  });
-
-  const textures = useMemo(
-    () => ({
-      grille: createGrilleTexture(),
-      slots: createSlotTexture(),
-      lcd: createLcdTexture(),
-    }),
+  const latchMat = useMemo(
+    () =>
+      new THREE.MeshStandardMaterial({
+        color: '#94a3b8',
+        metalness: 0.85,
+        roughness: 0.22,
+      }),
     [],
   );
 
   return (
     <animated.group position={pos as any} scale={scale as any} rotation={rot as any} {...groupHandlers}>
       <group ref={spinRef}>
-        {/* Chassis */}
-        <RoundedBox args={[0.7, 0.9, 0.7]} radius={0.02} smoothness={4} castShadow receiveShadow>
-          <meshStandardMaterial color="#3a3f47" metalness={0.55} roughness={0.42} />
+        {/* ── Server Chassis ── */}
+        <RoundedBox args={[0.68, 0.90, 0.68]} radius={0.025} smoothness={4} castShadow receiveShadow>
+          <primitive object={chassisMat} attach="material" />
         </RoundedBox>
 
-        {/* Vented top and side panels */}
-        <mesh position={[0, 0.451, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-          <planeGeometry args={[0.56, 0.56]} />
-          <meshStandardMaterial map={textures.slots} metalness={0.6} roughness={0.5} />
-        </mesh>
-        {[1, -1].map((side) => (
-          <mesh key={side} position={[side * 0.351, 0.05, 0]} rotation={[0, side * Math.PI / 2, 0]}>
-            <planeGeometry args={[0.5, 0.5]} />
-            <meshStandardMaterial map={textures.slots} metalness={0.6} roughness={0.5} />
+        {/* ── Left & Right Rack Ears ── */}
+        {[-0.345, 0.345].map((x) => (
+          <mesh key={x} position={[x, 0, 0.32]}>
+            <boxGeometry args={[0.02, 0.86, 0.05]} />
+            <meshStandardMaterial color="#191c22" metalness={0.7} roughness={0.3} />
           </mesh>
         ))}
 
-        {/* Rack ears with thumbscrews */}
-        {[1, -1].map((side) => (
-          <group key={side} position={[side * 0.365, 0, 0.33]}>
-            <mesh>
-              <boxGeometry args={[0.03, 0.88, 0.06]} />
-              <meshStandardMaterial color="#1c1f24" metalness={0.8} roughness={0.35} />
-            </mesh>
-            {[0.36, -0.36].map((y) => (
-              <mesh key={y} position={[0, y, 0.032]} rotation={[Math.PI / 2, 0, 0]}>
-                <cylinderGeometry args={[0.012, 0.012, 0.012, 12]} />
-                <meshStandardMaterial color="#c9ccd2" metalness={1} roughness={0.25} />
-              </mesh>
-            ))}
-          </group>
-        ))}
-
-        {/* Front status LCD */}
-        <mesh position={[0, 0.355, 0.352]}>
-          <boxGeometry args={[0.56, 0.11, 0.012]} />
-          <meshStandardMaterial color="#111317" metalness={0.5} roughness={0.4} />
+        {/* ── Upper Status Glass Header ── */}
+        <mesh position={[0, 0.355, 0.342]}>
+          <boxGeometry args={[0.56, 0.09, 0.015]} />
+          <meshStandardMaterial color="#0f1115" metalness={0.8} roughness={0.2} />
         </mesh>
-        <mesh position={[0, 0.355, 0.359]}>
-          <planeGeometry args={[0.5, 0.075]} />
-          <meshStandardMaterial map={textures.lcd} emissive="#ffffff" emissiveMap={textures.lcd} emissiveIntensity={0.9} />
+        {/* Steady Emerald Health Bar (Static) */}
+        <mesh position={[0, 0.355, 0.351]}>
+          <planeGeometry args={[0.46, 0.016]} />
+          <meshStandardMaterial color="#10b981" emissive="#10b981" emissiveIntensity={1.4} />
         </mesh>
 
-        {/* Hot-swap drive sleds */}
+        {/* ── 4 Hot-Swap Drive Bays ── */}
         {SLED_Y.map((y, i) => (
-          <group key={y} position={[0, y, 0.35]}>
-            <mesh position={[0, 0, 0.012]}>
-              <boxGeometry args={[0.6, 0.13, 0.024]} />
-              <meshStandardMaterial color="#5a616c" metalness={0.45} roughness={0.4} />
+          <group key={i} position={[0, y, 0.342]}>
+            {/* Drive Sled Face */}
+            <mesh position={[0, 0, 0]}>
+              <boxGeometry args={[0.56, 0.12, 0.014]} />
+              <primitive object={sledMat} attach="material" />
             </mesh>
-            <mesh position={[-0.06, 0, 0.0245]}>
-              <planeGeometry args={[0.38, 0.095]} />
-              <meshStandardMaterial map={textures.grille} metalness={0.3} roughness={0.55} />
+
+            {/* Horizontal Vent Slit */}
+            <mesh position={[-0.06, 0, 0.008]}>
+              <planeGeometry args={[0.36, 0.024]} />
+              <meshBasicMaterial color="#111317" />
             </mesh>
-            {/* Release lever */}
-            <mesh position={[0.2, 0, 0.034]}>
-              <boxGeometry args={[0.07, 0.1, 0.02]} />
-              <meshStandardMaterial color="#8d939d" metalness={0.9} roughness={0.25} />
+
+            {/* Release Lever Latch */}
+            <mesh position={[0.20, 0, 0.012]}>
+              <boxGeometry args={[0.07, 0.08, 0.014]} />
+              <primitive object={latchMat} attach="material" />
             </mesh>
-            <mesh position={[0.2, 0.03, 0.046]}>
-              <boxGeometry args={[0.05, 0.012, 0.006]} />
-              <meshStandardMaterial color="#e5642b" />
-            </mesh>
-            {/* Power (steady) and activity (blinking) LEDs */}
-            <mesh position={[0.26, 0.025, 0.026]}>
-              <boxGeometry args={[0.014, 0.014, 0.006]} />
-              <meshStandardMaterial color="#39ff6a" emissive="#39ff6a" emissiveIntensity={2} />
-            </mesh>
-            <mesh position={[0.26, -0.015, 0.026]}>
-              <boxGeometry args={[0.014, 0.014, 0.006]} />
-              <meshStandardMaterial
-                ref={(m) => {
-                  activityLeds.current[i] = m;
-                }}
-                color={i === 2 ? '#ffb020' : '#3aa0ff'}
-                emissive={i === 2 ? '#ffb020' : '#3aa0ff'}
-                emissiveIntensity={1}
-              />
+
+            {/* Steady Status Micro-Dot (Static, zero blinking) */}
+            <mesh position={[0.245, 0, 0.02]}>
+              <circleGeometry args={[0.008, 16]} />
+              <meshStandardMaterial color="#10b981" emissive="#10b981" emissiveIntensity={1.8} />
             </mesh>
           </group>
         ))}
 
-        {/* Power button and front USB ports */}
-        <mesh position={[0.22, -0.4, 0.352]} rotation={[Math.PI / 2, 0, 0]}>
-          <cylinderGeometry args={[0.026, 0.026, 0.012, 24]} />
-          <meshStandardMaterial color="#1a1c20" metalness={0.8} roughness={0.3} />
-        </mesh>
-        <mesh position={[0.22, -0.4, 0.359]}>
-          <torusGeometry args={[0.018, 0.003, 6, 24]} />
-          <meshStandardMaterial color="#3aa0ff" emissive="#3aa0ff" emissiveIntensity={2.5} />
-        </mesh>
-        {[-0.22, -0.16].map((x) => (
-          <mesh key={x} position={[x, -0.4, 0.352]}>
-            <boxGeometry args={[0.035, 0.014, 0.01]} />
-            <meshStandardMaterial color="#050505" />
+        {/* ── Bottom Power Button ── */}
+        <group position={[0.20, -0.395, 0.344]}>
+          <mesh rotation={[Math.PI / 2, 0, 0]}>
+            <cylinderGeometry args={[0.024, 0.024, 0.01, 24]} />
+            <meshStandardMaterial color="#191c22" metalness={0.7} roughness={0.3} />
+          </mesh>
+          <mesh position={[0, 0, 0.006]}>
+            <ringGeometry args={[0.012, 0.016, 24]} />
+            <meshStandardMaterial color="#0284c7" emissive="#0284c7" emissiveIntensity={2.0} />
+          </mesh>
+        </group>
+
+        {/* ── Rubber Feet ── */}
+        {FEET.map(([x, z], i) => (
+          <mesh key={i} position={[x, -0.46, z]}>
+            <cylinderGeometry args={[0.035, 0.04, 0.02, 16]} />
+            <meshStandardMaterial color="#111317" roughness={0.9} />
           </mesh>
         ))}
-
-        {/* Rear: cooling fans behind finger guards, PSU inlet and network ports */}
-        {[-0.15, 0.15].map((x, i) => (
-          <group key={x} position={[x, 0.12, -0.355]}>
-            <mesh rotation={[Math.PI / 2, 0, 0]}>
-              <cylinderGeometry args={[0.13, 0.13, 0.012, 32]} />
-              <meshStandardMaterial color="#0c0d10" />
-            </mesh>
-            <group ref={i === 0 ? fan1 : fan2} position={[0, 0, -0.008]}>
-              <mesh rotation={[Math.PI / 2, 0, 0]}>
-                <cylinderGeometry args={[0.035, 0.035, 0.02, 16]} />
-                <meshStandardMaterial color="#26282d" />
-              </mesh>
-              <FanBlades />
-            </group>
-            {[0.12, 0.08, 0.04].map((r) => (
-              <mesh key={r} position={[0, 0, -0.016]}>
-                <torusGeometry args={[r, 0.004, 6, 32]} />
-                <meshStandardMaterial color="#9aa0a8" metalness={1} roughness={0.3} />
-              </mesh>
-            ))}
-          </group>
-        ))}
-        <mesh position={[-0.2, -0.28, -0.356]}>
-          <boxGeometry args={[0.1, 0.07, 0.012]} />
-          <meshStandardMaterial color="#050505" />
-        </mesh>
-        {[0.08, 0.2].map((x) => (
-          <group key={x} position={[x, -0.28, -0.356]}>
-            <mesh>
-              <boxGeometry args={[0.07, 0.06, 0.012]} />
-              <meshStandardMaterial color="#b4b8be" metalness={0.9} roughness={0.3} />
-            </mesh>
-            <mesh position={[0, -0.004, -0.004]}>
-              <boxGeometry args={[0.05, 0.04, 0.008]} />
-              <meshStandardMaterial color="#050505" />
-            </mesh>
-            <mesh position={[-0.026, 0.024, -0.007]}>
-              <boxGeometry args={[0.01, 0.008, 0.004]} />
-              <meshStandardMaterial color="#39ff6a" emissive="#39ff6a" emissiveIntensity={2} />
-            </mesh>
-          </group>
-        ))}
-
-        {/* Rubber feet */}
-        <InstancedDots
-          positions={[
-            [-0.28, -0.458, -0.28],
-            [0.28, -0.458, -0.28],
-            [-0.28, -0.458, 0.28],
-            [0.28, -0.458, 0.28],
-          ]}
-          geometry={<cylinderGeometry args={[0.04, 0.045, 0.02, 16]} />}
-          material={<meshStandardMaterial color="#111" roughness={0.9} />}
-        />
       </group>
     </animated.group>
   );
