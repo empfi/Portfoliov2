@@ -154,11 +154,11 @@ function RightPageText({ visible, posY }: { visible: boolean; posY: any }) {
         <planeGeometry args={[1.6, 0.005]} />
         <meshBasicMaterial color="#94a3b8" />
       </mesh>
-      <Text font={FONT} fontSize={0.18} color={color} anchorX="center" anchorY="top" position={[0, 0.72, 0]} maxWidth={2.15} textAlign="center" lineHeight={1.25}>
-        {"Feel free to explore my workspace!\nEach object represents a real project."}
+      <Text font={FONT} fontSize={0.18} color={color} anchorX="center" anchorY="top" position={[0, 0.72, 0]} maxWidth={2.15} textAlign="center" lineHeight={1.3}>
+        {"Feel free to explore my workspace!\nMy projects are scattered around the desk as interactive 3D objects."}
       </Text>
-      <Text font={FONT} fontSize={0.165} color="#334155" anchorX="center" anchorY="top" position={[0, 0.05, 0]} maxWidth={2.0} textAlign="center" lineHeight={1.25}>
-        {"• Diamond Sword → hyperplex.de\n• Brass Key → LuaProtect\n• Safe → Bloxvault Extension\n• Server → MineDock Control Plane"}
+      <Text font={FONT} fontSize={0.18} color={color} anchorX="center" anchorY="top" position={[0, -0.05, 0]} maxWidth={2.1} textAlign="center" lineHeight={1.3}>
+        {"Click around to discover them!"}
       </Text>
     </animated.group>
   );
