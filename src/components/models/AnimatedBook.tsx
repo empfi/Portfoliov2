@@ -9,118 +9,7 @@ import { useRest } from '@/context/DeskLayout';
 import { PageEdges } from './PageEdges';
 
 const FONT = '/fonts/caveat.woff';
-
-/**
- * Ornate Gold Foil Cover Tooling
- * Double-line gilded filigree border with corner diamonds and decorative fleurons.
- */
-function OrnateCoverBorder({ goldColor = '#f3ca65' }: { goldColor?: string }) {
-  const goldMat = useMemo(
-    () =>
-      new THREE.MeshStandardMaterial({
-        color: goldColor,
-        metalness: 0.92,
-        roughness: 0.22,
-      }),
-    [goldColor],
-  );
-
-  // Outer border dimensions
-  const w1 = 2.22, d1 = 3.18, t1 = 0.016;
-  const outerBars: [number, number, number, number][] = [
-    [0, -d1 / 2, w1, t1],
-    [0, d1 / 2, w1, t1],
-    [-w1 / 2, 0, t1, d1],
-    [w1 / 2, 0, t1, d1],
-  ];
-
-  // Inner border dimensions
-  const w2 = 2.06, d2 = 3.02, t2 = 0.010;
-  const innerBars: [number, number, number, number][] = [
-    [0, -d2 / 2, w2, t2],
-    [0, d2 / 2, w2, t2],
-    [-w2 / 2, 0, t2, d2],
-    [w2 / 2, 0, t2, d2],
-  ];
-
-  // Corner gold diamond rosettes
-  const cx = w1 / 2 - 0.12;
-  const cz = d1 / 2 - 0.12;
-  const corners: [number, number][] = [
-    [-cx, -cz],
-    [cx, -cz],
-    [-cx, cz],
-    [cx, cz],
-  ];
-
-  return (
-    <group position={[1.27, 0.022, 0]}>
-      {/* Outer gilded line */}
-      {outerBars.map(([x, z, bw, bd], i) => (
-        <mesh key={`out-${i}`} position={[x, 0.001, z]}>
-          <boxGeometry args={[bw, 0.003, bd]} />
-          <primitive object={goldMat} attach="material" />
-        </mesh>
-      ))}
-
-      {/* Inner fine gilded line */}
-      {innerBars.map(([x, z, bw, bd], i) => (
-        <mesh key={`in-${i}`} position={[x, 0.001, z]}>
-          <boxGeometry args={[bw, 0.003, bd]} />
-          <primitive object={goldMat} attach="material" />
-        </mesh>
-      ))}
-
-      {/* 4 Corner corner-accent diamonds */}
-      {corners.map(([x, z], i) => (
-        <mesh key={`crn-${i}`} position={[x, 0.0015, z]} rotation={[-Math.PI / 2, 0, Math.PI / 4]}>
-          <planeGeometry args={[0.045, 0.045]} />
-          <primitive object={goldMat} attach="material" />
-        </mesh>
-      ))}
-
-      {/* Central diamond fleuron above title */}
-      <mesh position={[0, 0.002, -1.45]} rotation={[-Math.PI / 2, 0, Math.PI / 4]}>
-        <planeGeometry args={[0.065, 0.065]} />
-        <primitive object={goldMat} attach="material" />
-      </mesh>
-    </group>
-  );
-}
-
-/** Raised leather ribs on book spine (classic raised bands) */
-function SpineRibs({ color = '#101a2d', count = 5 }: { color?: string; count?: number }) {
-  const ribMat = useMemo(
-    () =>
-      new THREE.MeshStandardMaterial({
-        color,
-        roughness: 0.65,
-        metalness: 0.05,
-      }),
-    [color],
-  );
-
-  const zPositions = useMemo(() => {
-    const list: number[] = [];
-    const span = 2.6;
-    const step = span / (count - 1);
-    for (let i = 0; i < count; i++) {
-      list.push(-span / 2 + i * step);
-    }
-    return list;
-  }, [count]);
-
-  return (
-    <group position={[0, 0.11, 0]}>
-      {zPositions.map((z, i) => (
-        <mesh key={i} position={[-0.026, 0, z]}>
-          <boxGeometry args={[0.016, 0.04, 0.08]} />
-          <primitive object={ribMat} attach="material" />
-        </mesh>
-      ))}
-    </group>
-  );
-}
+const TITLE_FONT = '/fonts/book-title.woff';
 
 function LeftPageText({ visible, posY }: { visible: boolean; posY: any }) {
   const color = '#0f172a';
@@ -315,9 +204,6 @@ export function AnimatedBook() {
           <primitive object={spineMat} attach="material" />
         </RoundedBox>
 
-        {/* Raised bands on spine */}
-        <SpineRibs color="#0c1424" count={5} />
-
         {/* ── Hinge 2: Front Cover ── */}
         <animated.group position={[0, 0.22, 0]} rotation-z={frontRotZ as any}>
           <RoundedBox
@@ -334,33 +220,18 @@ export function AnimatedBook() {
             <primitive object={coverMat} attach="material" />
           </RoundedBox>
 
-          {/* Ornate Gold Gilt Border with corner diamonds */}
-          <OrnateCoverBorder goldColor="#f5c762" />
-
-          {/* Title Stamped in Gold Leaf */}
+          {/* Title */}
           <Text
-            font={FONT}
-            fontSize={0.52}
-            color="#f5c762"
-            position={[1.27, 0.024, -0.92]}
+            font={TITLE_FONT}
+            fontSize={0.42}
+            letterSpacing={0.06}
+            color="#e2e8f0"
+            position={[1.27, 0.024, -0.3]}
             rotation={[-Math.PI / 2, 0, 0]}
             anchorX="center"
             anchorY="middle"
           >
             Journal
-          </Text>
-
-          {/* Subtle Stamped Subtitle */}
-          <Text
-            font={FONT}
-            fontSize={0.16}
-            color="#d4af37"
-            position={[1.27, 0.024, -0.52]}
-            rotation={[-Math.PI / 2, 0, 0]}
-            anchorX="center"
-            anchorY="middle"
-          >
-            — Personal Notes & Code —
           </Text>
 
           {/* Left Page Stack (when book opens) */}

@@ -1,13 +1,29 @@
 "use client";
 import React from 'react';
 import { animated } from '@react-spring/three';
-import { Text } from '@react-three/drei';
+import { Text, useTexture } from '@react-three/drei';
 import { useRest } from '@/context/DeskLayout';
 import { useInspectable } from '@/utils/useInspectable';
+
+const PHOTO_MAP: Record<string, string> = {
+  polaroid_1: '/photos/bigben-lego.webp',
+  polaroid_2: '/photos/sea.jpg',
+  polaroid_3: '/photos/bigben-london.webp',
+};
 
 interface PolaroidProps {
   id: string;
   caption: string;
+}
+
+function PolaroidPhoto({ src }: { src: string }) {
+  const texture = useTexture(src);
+  return (
+    <mesh position={[0, 0.011, -0.08]} rotation={[-Math.PI / 2, 0, 0]}>
+      <planeGeometry args={[0.7, 0.7]} />
+      <meshStandardMaterial map={texture} roughness={0.6} />
+    </mesh>
+  );
 }
 
 export function Polaroid({ id, caption }: PolaroidProps) {
@@ -20,6 +36,8 @@ export function Polaroid({ id, caption }: PolaroidProps) {
     heldScale: 1.42,
   });
 
+  const photo = PHOTO_MAP[id];
+
   return (
     <animated.group position={pos as any} rotation={rot as any} scale={scale as any} {...groupHandlers}>
       <group ref={spinRef}>
@@ -29,24 +47,15 @@ export function Polaroid({ id, caption }: PolaroidProps) {
           <meshStandardMaterial color="#fafafa" roughness={0.9} />
         </mesh>
 
-        {/* Photo Area Placeholder */}
-        <mesh position={[0, 0.011, -0.08]} rotation={[-Math.PI / 2, 0, 0]}>
-          <planeGeometry args={[0.7, 0.7]} />
-          <meshStandardMaterial color="#333333" roughness={0.8} metalness={0.1} />
-        </mesh>
-
-        {/* Coming Soon Text inside photo area */}
-        <Text
-          font="/fonts/inter.woff"
-          fontSize={0.08}
-          color="#ffffff"
-          position={[0, 0.012, -0.08]}
-          rotation={[-Math.PI / 2, 0, 0]}
-          anchorX="center"
-          anchorY="middle"
-        >
-          Coming soon...
-        </Text>
+        {/* Photo */}
+        {photo ? (
+          <PolaroidPhoto src={photo} />
+        ) : (
+          <mesh position={[0, 0.011, -0.08]} rotation={[-Math.PI / 2, 0, 0]}>
+            <planeGeometry args={[0.7, 0.7]} />
+            <meshStandardMaterial color="#333333" roughness={0.8} />
+          </mesh>
+        )}
 
         {/* Caption */}
         <Text

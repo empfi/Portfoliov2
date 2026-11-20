@@ -10,110 +10,8 @@ import { useRest } from '@/context/DeskLayout';
 import { useTurnstile } from '@/context/TurnstileContext';
 import { draft, useDraft, MAX_CHARS } from '@/context/GuestbookDraft';
 
-/** Ornate Gold Foil Cover Tooling */
-function OrnateCoverBorder({ goldColor = '#e5b857' }: { goldColor?: string }) {
-  const goldMat = React.useMemo(
-    () =>
-      new THREE.MeshStandardMaterial({
-        color: goldColor,
-        metalness: 0.92,
-        roughness: 0.22,
-      }),
-    [goldColor],
-  );
-
-  const w1 = 2.22, d1 = 3.18, t1 = 0.016;
-  const outerBars: [number, number, number, number][] = [
-    [0, -d1 / 2, w1, t1],
-    [0, d1 / 2, w1, t1],
-    [-w1 / 2, 0, t1, d1],
-    [w1 / 2, 0, t1, d1],
-  ];
-
-  const w2 = 2.06, d2 = 3.02, t2 = 0.010;
-  const innerBars: [number, number, number, number][] = [
-    [0, -d2 / 2, w2, t2],
-    [0, d2 / 2, w2, t2],
-    [-w2 / 2, 0, t2, d2],
-    [w2 / 2, 0, t2, d2],
-  ];
-
-  const cx = w1 / 2 - 0.12;
-  const cz = d1 / 2 - 0.12;
-  const corners: [number, number][] = [
-    [-cx, -cz],
-    [cx, -cz],
-    [-cx, cz],
-    [cx, cz],
-  ];
-
-  return (
-    <group position={[1.27, 0.022, 0]}>
-      {outerBars.map(([x, z, bw, bd], i) => (
-        <mesh key={`out-${i}`} position={[x, 0.001, z]}>
-          <boxGeometry args={[bw, 0.003, bd]} />
-          <primitive object={goldMat} attach="material" />
-        </mesh>
-      ))}
-
-      {innerBars.map(([x, z, bw, bd], i) => (
-        <mesh key={`in-${i}`} position={[x, 0.001, z]}>
-          <boxGeometry args={[bw, 0.003, bd]} />
-          <primitive object={goldMat} attach="material" />
-        </mesh>
-      ))}
-
-      {corners.map(([x, z], i) => (
-        <mesh key={`crn-${i}`} position={[x, 0.0015, z]} rotation={[-Math.PI / 2, 0, Math.PI / 4]}>
-          <planeGeometry args={[0.045, 0.045]} />
-          <primitive object={goldMat} attach="material" />
-        </mesh>
-      ))}
-
-      {/* Central diamond fleuron above title */}
-      <mesh position={[0, 0.002, -1.45]} rotation={[-Math.PI / 2, 0, Math.PI / 4]}>
-        <planeGeometry args={[0.065, 0.065]} />
-        <primitive object={goldMat} attach="material" />
-      </mesh>
-    </group>
-  );
-}
-
-/** Raised leather ribs on book spine (classic raised bands) */
-function SpineRibs({ color = '#381c08', count = 5 }: { color?: string; count?: number }) {
-  const ribMat = React.useMemo(
-    () =>
-      new THREE.MeshStandardMaterial({
-        color,
-        roughness: 0.72,
-        metalness: 0.05,
-      }),
-    [color],
-  );
-
-  const zPositions = React.useMemo(() => {
-    const list: number[] = [];
-    const span = 2.6;
-    const step = span / (count - 1);
-    for (let i = 0; i < count; i++) {
-      list.push(-span / 2 + i * step);
-    }
-    return list;
-  }, [count]);
-
-  return (
-    <group position={[0, 0.11, 0]}>
-      {zPositions.map((z, i) => (
-        <mesh key={i} position={[-0.026, 0, z]}>
-          <boxGeometry args={[0.016, 0.04, 0.08]} />
-          <primitive object={ribMat} attach="material" />
-        </mesh>
-      ))}
-    </group>
-  );
-}
-
 const FONT = '/fonts/caveat.woff';
+const TITLE_FONT = '/fonts/book-title.woff';
 
 const setTyped = draft.setText;
 
@@ -435,9 +333,6 @@ export function GuestBook() {
           <meshStandardMaterial color="#381c08" roughness={0.74} metalness={0.05} />
         </RoundedBox>
 
-        {/* Raised bands on leather spine */}
-        <SpineRibs color="#251204" count={5} />
-
         {/* ── Hinge 2: Front Cover & Left Page Stack ── */}
         <animated.group position={[0, 0.22, 0]} rotation-z={frontRotZ as any}>
           <RoundedBox args={[2.54, 0.04, 3.5]} position={[1.27, 0, 0]} radius={0.018} smoothness={4}
@@ -445,12 +340,18 @@ export function GuestBook() {
             <meshStandardMaterial color="#5c2e0b" roughness={0.76} metalness={0.04} />
           </RoundedBox>
 
-          <OrnateCoverBorder goldColor="#e5b857" />
-          <Text font={FONT} fontSize={0.52} color="#e5b857" position={[1.27, 0.024, -0.92]} rotation={[-Math.PI / 2, 0, 0]} anchorX="center" anchorY="middle">
+          {/* Title */}
+          <Text
+            font={TITLE_FONT}
+            fontSize={0.42}
+            letterSpacing={0.06}
+            color="#f5e6d3"
+            position={[1.27, 0.024, -0.3]}
+            rotation={[-Math.PI / 2, 0, 0]}
+            anchorX="center"
+            anchorY="middle"
+          >
             Guestbook
-          </Text>
-          <Text font={FONT} fontSize={0.16} color="#c99d3e" position={[1.27, 0.024, -0.52]} rotation={[-Math.PI / 2, 0, 0]} anchorX="center" anchorY="middle">
-            — Visitors Log —
           </Text>
 
           <animated.group position-x={1.25} position-y={leftPagePosY as any} scale-y={leftPageScaleY as any}>
