@@ -19,9 +19,9 @@ export const LANDSCAPE: Record<string, Rest> = {
   mysterybox: { pos: [-5.8, 0, -1.8],     rot: [0, 0, 0] },
   book:       { pos: [-4.0, 0.06, 0.55],  rot: [0, 0.16, 0] },
   guestbook:  { pos: [4.6, 0.06, 0.45],   rot: [0, -0.20, 0] },
-  polaroid_1: { pos: [4.6, 0.02, 2.30],    rot: [0, -0.16, 0] },
-  polaroid_2: { pos: [3.4, 0.02, 2.45],    rot: [0, 0.14, 0] },
-  polaroid_3: { pos: [2.2, 0.02, 2.35],    rot: [0, -0.12, 0] },
+  polaroid_1: { pos: [2.2, 0.02, 1.45],    rot: [0, 0.18, 0] },
+  polaroid_2: { pos: [1.0, 0.02, 1.60],    rot: [0, -0.08, 0] },
+  polaroid_3: { pos: [-0.2, 0.02, 1.45],   rot: [0, 0.12, 0] },
 };
 
 export const PORTRAIT: Record<string, Rest> = {

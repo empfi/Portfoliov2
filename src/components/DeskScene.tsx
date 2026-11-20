@@ -346,9 +346,9 @@ export default function DeskScene() {
               <AnimatedBook />
               <GuestBook />
 
-              <Polaroid id="polaroid_1" caption="Coming soon" />
-              <Polaroid id="polaroid_2" caption="Coming soon" />
-              <Polaroid id="polaroid_3" caption="Coming soon" />
+              <Polaroid id="polaroid_1" caption="Lego Big Ben" />
+              <Polaroid id="polaroid_2" caption="Mountain Lake" />
+              <Polaroid id="polaroid_3" caption="Big Ben, London" />
 
               <DeskShadows />
             </Suspense>
